@@ -4,7 +4,8 @@ AgaruUpは、SwiftUIとSwiftDataを使用して開発されたiOSアプリケー
 
 ## 📱 概要
 
-このプロジェクトは、[プロジェクトの目的や機能を簡潔に説明]を目的として開発されています。
+AgaruUpは、ユーザーが日常生活の中で遭遇した『アガる』出来事をニュース化して共有できるプラットフォームです。
+ユーザーは、アガるボタンを押すだけで、その瞬間を生成されるショートニュースを通じて他のユーザーと共有することができます。
 
 ## 🛠️ 技術スタック
 
@@ -26,7 +27,7 @@ AgaruUpは、SwiftUIとSwiftDataを使用して開発されたiOSアプリケー
 
 1. リポジトリをクローンします：
 ```bash
-git clone [リポジトリURL]
+git clone https://github.com/ohs25-2-misoten/AgaruUp-swift.git
 cd AgaruUp
 ```
 
@@ -72,7 +73,7 @@ AgaruUp/
 - `release/*`: リリース準備用ブランチ
 - `hotfix/*`: 緊急修正用ブランチ
 
-詳細は [BRANCHING_RULES.md](./BRANCHING_RULES.md) を参照してください。
+詳細は [BRANCHING_RULES.md](./AgaruUp/BRANCHING_RULES.md) を参照してください。
 
 ### 新機能開発の流れ
 
@@ -188,7 +189,7 @@ Semantic Versioning (SemVer) を採用：
 
 ## 📄 ライセンス
 
-[ライセンス情報を記載]
+GPL-3.0ライセンスの下で提供されています。詳細は [LICENSE](../LICENSE) ファイルを参照してください。
 
 ## 👥 メンテナー
 
