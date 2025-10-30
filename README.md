@@ -189,7 +189,7 @@ Semantic Versioning (SemVer) を採用：
 
 ## 📄 ライセンス
 
-GPL-3.0ライセンスの下で提供されています。詳細は [LICENSE](./LICENSE) ファイルを参照してください。
+GNU Affero General Public License v3.0 (AGPL-3.0) ライセンスの下で提供されています。詳細は [LICENSE](./LICENSE) ファイルを参照してください。
 
 ## 👥 メンテナー
 
