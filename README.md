@@ -189,7 +189,7 @@ Semantic Versioning (SemVer) を採用：
 
 ## 📄 ライセンス
 
-GPL-3.0ライセンスの下で提供されています。詳細は [LICENSE](../LICENSE) ファイルを参照してください。
+GPL-3.0ライセンスの下で提供されています。詳細は [LICENSE](./LICENSE) ファイルを参照してください。
 
 ## 👥 メンテナー
 
