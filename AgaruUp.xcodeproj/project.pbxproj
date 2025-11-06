@@ -33,7 +33,11 @@
 		6374A22F2EB30D86002FB1ED /* Exceptions for "AgaruUp" folder in "AgaruUp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				DataModels/.gitkeep,
 				Info.plist,
+				Models/.gitkeep,
+				Services/.gitkeep,
+				Views/.gitkeep,
 			);
 			target = 6374A20B2EB30D84002FB1ED /* AgaruUp */;
 		};
