@@ -13,6 +13,7 @@ struct VideoPlayerView: View {
     let video: VideoModel
     @State private var player: AVPlayer?
     @State private var isPlaying = false
+    @State private var observer: NSObjectProtocol?
     
     var body: some View {
         GeometryReader { geometry in
@@ -71,7 +72,7 @@ struct VideoPlayerView: View {
         isPlaying = true
         
         // ループ再生の設定
-        NotificationCenter.default.addObserver(
+        observer = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: player?.currentItem,
             queue: .main
@@ -84,7 +85,12 @@ struct VideoPlayerView: View {
     private func cleanupPlayer() {
         player?.pause()
         player = nil
-        NotificationCenter.default.removeObserver(self)
+        
+        // オブザーバーを削除
+        if let observer = observer {
+            NotificationCenter.default.removeObserver(observer)
+            self.observer = nil
+        }
     }
 }
 
