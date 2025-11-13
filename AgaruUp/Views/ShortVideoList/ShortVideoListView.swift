@@ -1,5 +1,5 @@
 //
-//  ShortVideoLIstView.swift
+//  ShortVideoListView.swift
 //  AgaruUp
 //
 //  Created by 拓実 on 2025/11/06.

@@ -12,17 +12,17 @@ struct MainTabView: View {
     TabView {
       ShortVideoListView()
         .tabItem {
-          Image(systemName: "video.fill")
+          Label("ニュース", systemImage: "video.fill")
         }
 
       AgeView()
         .tabItem {
-          Image(systemName: "figure.dance")
+          Label("アガる", systemImage: "figure.dance")
         }
 
       FavoriteView()
         .tabItem {
-          Image(systemName: "star")
+          Label("お気に入り", systemImage: "star")
         }
     }
     .tint(Color("background"))
