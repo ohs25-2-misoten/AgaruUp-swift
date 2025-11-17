@@ -8,12 +8,19 @@
 import SwiftUI
 
 struct FavoriteView: View {
+  @State private var isShowingSearch = false
+
   var body: some View {
     NavigationStack {
       VStack {
         Text("お気に入り画面")
       }
-      .addSearchAppBarButton {}
+      .addSearchAppBarButton {
+        isShowingSearch = true
+      }
+      .sheet(isPresented: $isShowingSearch) {
+        SearchView()
+      }
     }
   }
 }
@@ -21,3 +28,4 @@ struct FavoriteView: View {
 #Preview {
   FavoriteView()
 }
+

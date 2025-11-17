@@ -8,12 +8,20 @@
 import SwiftUI
 
 struct AgeView: View {
+  @State private var isShowingSearch = false
+
   var body: some View {
     NavigationStack {
       VStack {
         ProgressIndicator()
       }
-      .addSearchAppBarButton {}
+      .addSearchAppBarButton {
+        isShowingSearch = true
+      }
+      .sheet(isPresented: $isShowingSearch) {
+        SearchView()
+      }
+
     }
   }
 }
