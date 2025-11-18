@@ -30,7 +30,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6374A22F2EB30D86002FB1ED /* Exceptions for "AgaruUp" folder in "AgaruUp" target */ = {
+		E1EDEA4C2EC2CD8C00C10F02 /* Exceptions for "AgaruUp" folder in "AgaruUp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				DataModels/.gitkeep,
@@ -38,20 +38,13 @@
 				Models/.gitkeep,
 				Services/.gitkeep,
 				Views/.gitkeep,
+				Views/ShortVideoList/Components/FeedCell.swift,
 			);
 			target = 6374A20B2EB30D84002FB1ED /* AgaruUp */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6374A20E2EB30D84002FB1ED /* AgaruUp */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6374A22F2EB30D86002FB1ED /* Exceptions for "AgaruUp" folder in "AgaruUp" target */,
-			);
-			path = AgaruUp;
-			sourceTree = "<group>";
-		};
 		6374A2202EB30D86002FB1ED /* AgaruUpTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AgaruUpTests;
@@ -60,6 +53,14 @@
 		6374A22A2EB30D86002FB1ED /* AgaruUpUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AgaruUpUITests;
+			sourceTree = "<group>";
+		};
+		E1EDEA3E2EC2CD8C00C10F02 /* AgaruUp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E1EDEA4C2EC2CD8C00C10F02 /* Exceptions for "AgaruUp" folder in "AgaruUp" target */,
+			);
+			path = AgaruUp;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -92,7 +93,7 @@
 		6374A2032EB30D84002FB1ED = {
 			isa = PBXGroup;
 			children = (
-				6374A20E2EB30D84002FB1ED /* AgaruUp */,
+				E1EDEA3E2EC2CD8C00C10F02 /* AgaruUp */,
 				6374A2202EB30D86002FB1ED /* AgaruUpTests */,
 				6374A22A2EB30D86002FB1ED /* AgaruUpUITests */,
 				6374A20D2EB30D84002FB1ED /* Products */,
@@ -119,13 +120,14 @@
 				6374A2082EB30D84002FB1ED /* Sources */,
 				6374A2092EB30D84002FB1ED /* Frameworks */,
 				6374A20A2EB30D84002FB1ED /* Resources */,
+				E1EDEA7E2EC561C700C10F02 /* Run SwiftLint */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				6374A20E2EB30D84002FB1ED /* AgaruUp */,
+				E1EDEA3E2EC2CD8C00C10F02 /* AgaruUp */,
 			);
 			name = AgaruUp;
 			packageProductDependencies = (
@@ -247,6 +249,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E1EDEA7E2EC561C700C10F02 /* Run SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Run SwiftLint";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		6374A2082EB30D84002FB1ED /* Sources */ = {
