@@ -31,7 +31,13 @@ struct FeedView: View {
     }
     .onAppear {
       loadPosts()
-      player.play()
+      if let firstPost = posts.first, let url = URL(string: firstPost.videoUrl) {
+        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        player.play()
+      }
+    }
+    .onDisappear {
+        player.pause()
     }
     .scrollPosition(id: $scrollPosition)
     .scrollTargetBehavior(.paging)
