@@ -12,12 +12,12 @@ struct MainTabView: View {
     TabView {
       FeedView()
         .tabItem {
-          Label("ニュース", systemImage: "video.fill")
+          Label("アガる動画", systemImage: "video.fill")
         }
 
       AgeView()
         .tabItem {
-          Label("アガる", systemImage: "figure.dance")
+          Label("アガる報告", systemImage: "figure.dance")
         }
 
       FavoriteView()
