@@ -36,7 +36,7 @@ struct FeedCell: View {
                   .resizable()
                   .frame(width: 20, height: 20)
                   .foregroundStyle(.white)
-                Text("1.2K")
+                Text("1.2K") // WebAPIから取得した値にリプレース予定
                   .font(.caption)
                   .foregroundStyle(.white)
               }
@@ -49,7 +49,7 @@ struct FeedCell: View {
                   .resizable()
                   .frame(width: 20, height: 20)
                   .foregroundStyle(.white)
-                Text("345")
+                Text("345") // WebAPIから取得した値にリプレース予定
                   .font(.caption)
                   .foregroundStyle(.white)
               }
