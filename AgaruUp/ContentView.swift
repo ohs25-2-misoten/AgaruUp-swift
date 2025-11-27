@@ -12,19 +12,23 @@ struct ContentView: View {
   @State private var isLoggedIn: Bool = false
   @State private var playbackManager = VideoPlaybackManager()
   private let dummyVideoURL = URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4")!
-
-    var body: some View {
-      if isLoggedIn {
-        MainTabView()
-          .onAppear {
+  
+  var body: some View {
+    if isLoggedIn {
+      MainTabView()
+        .onAppear {
+          if let dummyURL = playbackManager.getLocalVideoURL(fileName: "sample", fileExtension: "mp4") {
+            playbackManager.warmupPlayer(with: dummyURL)
+          } else {
             playbackManager.warmupPlayer(with: dummyVideoURL)
           }
-      } else {
-        TopView(isLoggedIn: $isLoggedIn)
-      }
+        }
+    } else {
+      TopView(isLoggedIn: $isLoggedIn)
     }
+  }
 }
 
 #Preview {
-    ContentView()
+  ContentView()
 }
