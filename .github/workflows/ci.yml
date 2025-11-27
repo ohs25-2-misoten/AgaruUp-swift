@@ -22,7 +22,7 @@ jobs:
         run: |
           xcodebuild test \
             -scheme AgaruUp \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
             -derivedDataPath .build \
             -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
@@ -32,7 +32,7 @@ jobs:
         run: |
           xcodebuild test \
             -scheme AgaruUp \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
             -derivedDataPath .build \
             -only-testing AgaruUpUITests \
             CODE_SIGN_IDENTITY="" \
