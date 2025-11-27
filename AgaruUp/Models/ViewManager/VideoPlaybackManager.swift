@@ -5,35 +5,58 @@
 //  Created by 拓実 on 2025/11/27.
 //
 
+import Foundation
+import AVFoundation
 import SwiftUI
-import AVKit
 
 @Observable
 final class VideoPlaybackManager {
-    private var savedProgress: [String: Double] = [:]
-    private var currentVideoUrl: String?
     let player = AVPlayer()
+
+  private var savedProgress: [String: Double] = [:]
+    private var currentVideoUrl: String?
+
+    var isWarmedUp: Bool = false
+
+    func warmupPlayer(with dummyURL: URL) {
+        guard !isWarmedUp else { return }
+
+        let dummyItem = AVPlayerItem(url: dummyURL)
+        player.replaceCurrentItem(with: dummyItem)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.player.replaceCurrentItem(with: nil)
+            self.isWarmedUp = true
+            print("AVPlayer ウォームアップ完了。")
+        }
+    }
 
     func loadVideo(url: URL) {
         let urlString = url.absoluteString
 
         if urlString == currentVideoUrl {
+            player.play()
             return
         }
 
         saveCurrentProgress()
 
         let playerItem = AVPlayerItem(url: url)
+
         player.replaceCurrentItem(with: playerItem)
         currentVideoUrl = urlString
 
         if let savedTime = savedProgress[urlString] {
-            let preferredTimescale: CMTimeScale = 600
-            let time = CMTime(seconds: savedTime, preferredTimescale: preferredTimescale)
-            player.seek(to: time)
-        }
+            let time = CMTime(seconds: savedTime, preferredTimescale: 600)
 
-        player.play()
+            player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] isFinished in
+                if isFinished {
+                    self?.player.play()
+                }
+            }
+        } else {
+            player.play()
+        }
     }
 
     func saveCurrentProgress() {
@@ -41,6 +64,7 @@ final class VideoPlaybackManager {
 
         if let currentTime = player.currentItem?.currentTime() {
             let seconds = CMTimeGetSeconds(currentTime)
+
             if seconds.isFinite && seconds > 0.5 {
                 savedProgress[url] = seconds
             }
@@ -54,10 +78,5 @@ final class VideoPlaybackManager {
 
     func resume() {
         player.play()
-    }
-    
-    deinit {
-        player.pause()
-        player.replaceCurrentItem(with: nil)
     }
 }
