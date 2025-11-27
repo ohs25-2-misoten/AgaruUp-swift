@@ -9,20 +9,20 @@ import SwiftUI
 import AVKit
 
 struct FeedView: View {
+  @Bindable var playbackManager: VideoPlaybackManager
   @State private var posts: [Post] = []
   @State private var scrollPosition: String?
-  @State private var player = AVPlayer()
-  
+
   private let videoUrls = [
     "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
     "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
   ]
-  
+
   var body: some View {
     ScrollView {
       LazyVStack(spacing: 0) {
         ForEach(posts) { post in
-          FeedCell(post: post, player: player)
+          FeedCell(post: post, player: playbackManager.player)
             .id(post.id)
             .onAppear { playInitialVideoIfNecessary() }
         }
@@ -32,12 +32,11 @@ struct FeedView: View {
     .onAppear {
       loadPosts()
       if let firstPost = posts.first, let url = URL(string: firstPost.videoUrl) {
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
-        player.play()
+        playbackManager.loadVideo(url: url)
       }
     }
     .onDisappear {
-        player.pause()
+      playbackManager.pauseAndSave()
     }
     .scrollPosition(id: $scrollPosition)
     .scrollTargetBehavior(.paging)
@@ -46,7 +45,7 @@ struct FeedView: View {
       playVideoOnChangeOfScrollPosition(postId: newValue)
     }
   }
-  
+
   private func loadPosts() {
     posts = [
       .init(id: UUID().uuidString, videoUrl: videoUrls[0]),
@@ -54,25 +53,25 @@ struct FeedView: View {
       .init(id: UUID().uuidString, videoUrl: videoUrls[0]),
     ]
   }
-  
+
   private func playInitialVideoIfNecessary() {
     guard
       scrollPosition == nil,
-      let post = posts.first,
-      player.currentItem == nil else { return }
-    let item = AVPlayerItem(url: URL(string: post.videoUrl)!)
-    player.replaceCurrentItem(with: item)
+      let post = posts.first
+    else { return }
+
+    playbackManager.loadVideo(url: URL(string: post.videoUrl)!)
   }
-  
+
   private func playVideoOnChangeOfScrollPosition(postId: String?) {
-    guard let currentPost = posts.first(where: { $0.id == postId }) else { return }
-    
-    player.replaceCurrentItem(with: nil)
-    let playerItem = AVPlayerItem(url: URL(string: currentPost.videoUrl)!)
-    player.replaceCurrentItem(with: playerItem)
+    guard let currentPost = posts.first(where: { $0.id == postId }),
+          let url = URL(string: currentPost.videoUrl)
+    else { return }
+
+    playbackManager.loadVideo(url: url)
   }
 }
 
 #Preview {
-  FeedView()
+  FeedView(playbackManager: VideoPlaybackManager())
 }

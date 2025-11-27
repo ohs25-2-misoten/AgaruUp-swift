@@ -8,9 +8,11 @@
 import SwiftUI
 
 struct MainTabView: View {
+  @State private var playbackManager = VideoPlaybackManager()
+
   var body: some View {
     TabView {
-      FeedView()
+      FeedView(playbackManager: playbackManager)
         .tabItem {
           Label("アガる動画", systemImage: "video.fill")
         }
