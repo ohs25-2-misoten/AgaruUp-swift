@@ -10,7 +10,7 @@ import SwiftUI
 struct SearchView: View {
   @State private var searchText: String = ""
   private let tags = ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
-  
+
   var body: some View {
     VStack {
       TextField("Search", text: $searchText)
@@ -26,7 +26,7 @@ struct SearchView: View {
       }
       Spacer()
       Button {
-        
+
       } label: {
         Text("検索")
           .font(.headline)

@@ -13,7 +13,7 @@ struct ProgressIndicator: View {
   private let stepAmount: Double = 0.1
   private let backgroundColor = Color.gray.opacity(0.3)
   private let indicatorColor = Color.orange
-  var action: () -> Void = { }
+  var action: () -> Void = {}
 
   var body: some View {
     VStack(spacing: 25) {

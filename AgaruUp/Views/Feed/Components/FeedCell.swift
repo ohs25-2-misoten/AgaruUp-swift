@@ -5,8 +5,8 @@
 //  Created by 拓実 on 2025/11/17.
 //
 
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct FeedCell: View {
   let post: Post
@@ -20,14 +20,14 @@ struct FeedCell: View {
         Spacer()
         HStack {
           VStack(alignment: .leading) {
-            Text("") // Title
-            Text("") // 生成日
+            Text("")  // Title
+            Text("")  // 生成日
           }
           .foregroundStyle(.white)
           .font(.subheadline)
-          
+
           Spacer()
-          
+
           VStack(spacing: 28) {
             Button {
             } label: {
@@ -36,12 +36,12 @@ struct FeedCell: View {
                   .resizable()
                   .frame(width: 20, height: 20)
                   .foregroundStyle(.white)
-                Text("1.2K") // WebAPIから取得した値にリプレース予定
+                Text("1.2K")  // WebAPIから取得した値にリプレース予定
                   .font(.caption)
                   .foregroundStyle(.white)
               }
             }
-            
+
             Button {
             } label: {
               VStack {
@@ -49,7 +49,7 @@ struct FeedCell: View {
                   .resizable()
                   .frame(width: 20, height: 20)
                   .foregroundStyle(.white)
-                Text("345") // WebAPIから取得した値にリプレース予定
+                Text("345")  // WebAPIから取得した値にリプレース予定
                   .font(.caption)
                   .foregroundStyle(.white)
               }

@@ -5,8 +5,8 @@
 //  Created by 拓実 on 2025/11/17.
 //
 
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct FeedView: View {
   @Bindable var playbackManager: VideoPlaybackManager
@@ -15,7 +15,7 @@ struct FeedView: View {
 
   private let videoUrls = [
     "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
   ]
 
   var body: some View {
@@ -65,7 +65,7 @@ struct FeedView: View {
 
   private func playVideoOnChangeOfScrollPosition(postId: String?) {
     guard let currentPost = posts.first(where: { $0.id == postId }),
-          let url = URL(string: currentPost.videoUrl)
+      let url = URL(string: currentPost.videoUrl)
     else { return }
 
     playbackManager.loadVideo(url: url)
