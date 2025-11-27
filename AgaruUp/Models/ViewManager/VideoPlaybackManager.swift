@@ -28,7 +28,8 @@ final class VideoPlaybackManager {
         currentVideoUrl = urlString
 
         if let savedTime = savedProgress[urlString] {
-            let time = CMTime(seconds: savedTime, preferredTimescale: 600)
+            private let preferredTimescale: CMTimeScale = 600
+            let time = CMTime(seconds: savedTime, preferredTimescale: preferredTimescale)
             player.seek(to: time)
         }
 
