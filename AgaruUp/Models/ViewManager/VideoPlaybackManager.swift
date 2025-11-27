@@ -54,4 +54,9 @@ final class VideoPlaybackManager {
     func resume() {
         player.play()
     }
+    
+    deinit {
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+    }
 }
