@@ -8,16 +8,18 @@
 import SwiftUI
 
 struct MainTabView: View {
+  @State private var playbackManager = VideoPlaybackManager()
+
   var body: some View {
     TabView {
-      ShortVideoListView()
+      FeedView(playbackManager: playbackManager)
         .tabItem {
-          Label("ニュース", systemImage: "video.fill")
+          Label("アガる動画", systemImage: "video.fill")
         }
 
       AgeView()
         .tabItem {
-          Label("アガる", systemImage: "figure.dance")
+          Label("アガる報告", systemImage: "figure.dance")
         }
 
       FavoriteView()
