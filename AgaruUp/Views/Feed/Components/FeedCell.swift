@@ -20,8 +20,8 @@ struct FeedCell: View {
         Spacer()
         HStack {
           VStack(alignment: .leading) {
-            Text("")
-            Text("")
+            Text("") // Title
+            Text("") // 生成日
           }
           .foregroundStyle(.white)
           .font(.subheadline)
