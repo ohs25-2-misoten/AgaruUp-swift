@@ -38,7 +38,7 @@
 				Models/.gitkeep,
 				Services/.gitkeep,
 				Views/.gitkeep,
-				FeedCell.swift,
+				Views/Feed/Components/FeedCell.swift,
 			);
 			target = 6374A20B2EB30D84002FB1ED /* AgaruUp */;
 		};
