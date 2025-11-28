@@ -1,4 +1,8 @@
-GitHub Copilotのレビュー向けの指示です。
+GitHub Copilot向けの指示です。
+
+# 一般規則
+- コミュニケーションを取る際やドキュメント等を記述する際は、日本語を使用してください。
+- リポジトリ内のドキュメント（[README.md](../README.md)、[BRANCHING_RULES.md](../AgaruUp/BRANCHING_RULES.md)等）に記載されている各種規則に則ってください。
 
 # レビュー時の規則
 - 変更が必要な場合は日本語でコメントを記載してください。
