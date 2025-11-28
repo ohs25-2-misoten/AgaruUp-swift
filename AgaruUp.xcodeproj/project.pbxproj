@@ -38,7 +38,6 @@
 				Models/.gitkeep,
 				Services/.gitkeep,
 				Views/.gitkeep,
-				Views/ShortVideoList/Components/FeedCell.swift,
 			);
 			target = 6374A20B2EB30D84002FB1ED /* AgaruUp */;
 		};
@@ -348,7 +347,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = AgaruUp/AgaruUp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = AgaruUp/AgaruUpRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5WPAC86M5Z;
