@@ -5,59 +5,85 @@
 //  Created by 拓実 on 2025/11/27.
 //
 
+import Foundation
+import AVFoundation
 import SwiftUI
-import AVKit
 
 @Observable
 final class VideoPlaybackManager {
-    private var savedProgress: [String: Double] = [:]
-    private var currentVideoUrl: String?
-    let player = AVPlayer()
+  let player = AVPlayer()
 
-    func loadVideo(url: URL) {
-        let urlString = url.absoluteString
+  private var savedProgress: [String: Double] = [:]
+  private var currentVideoUrl: String?
 
-        if urlString == currentVideoUrl {
-            return
+  var isWarmedUp: Bool = false
+
+  func getLocalVideoURL(fileName: String, fileExtension: String) -> URL? {
+    guard let url = Bundle.main.url(forResource: fileName, withExtension: fileExtension) else {
+      print("Error: Local video file \(fileName).\(fileExtension) not found in the bundle.")
+      return nil
+    }
+    return url
+  }
+
+  func warmupPlayer(with dummyURL: URL) {
+    guard !isWarmedUp else { return }
+
+    let dummyItem = AVPlayerItem(url: dummyURL)
+    player.replaceCurrentItem(with: dummyItem)
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      self.player.replaceCurrentItem(with: nil)
+      self.isWarmedUp = true
+    }
+  }
+
+  func loadVideo(url: URL) {
+    let urlString = url.absoluteString
+
+    if urlString == currentVideoUrl {
+      player.play()
+      return
+    }
+
+    saveCurrentProgress()
+
+    let playerItem = AVPlayerItem(url: url)
+
+    player.replaceCurrentItem(with: playerItem)
+    currentVideoUrl = urlString
+
+    if let savedTime = savedProgress[urlString] {
+      let time = CMTime(seconds: savedTime, preferredTimescale: 600)
+
+      player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] isFinished in
+        if isFinished {
+          self?.player.play()
         }
-
-        saveCurrentProgress()
-
-        let playerItem = AVPlayerItem(url: url)
-        player.replaceCurrentItem(with: playerItem)
-        currentVideoUrl = urlString
-
-        if let savedTime = savedProgress[urlString] {
-            let preferredTimescale: CMTimeScale = 600
-            let time = CMTime(seconds: savedTime, preferredTimescale: preferredTimescale)
-            player.seek(to: time)
-        }
-
-        player.play()
+      }
+    } else {
+      player.play()
     }
+  }
 
-    func saveCurrentProgress() {
-        guard let url = currentVideoUrl else { return }
+  func saveCurrentProgress() {
+    guard let url = currentVideoUrl else { return }
 
-        if let currentTime = player.currentItem?.currentTime() {
-            let seconds = CMTimeGetSeconds(currentTime)
-            if seconds.isFinite && seconds > 0.5 {
-                savedProgress[url] = seconds
-            }
-        }
-    }
+    if let currentTime = player.currentItem?.currentTime() {
+      let seconds = CMTimeGetSeconds(currentTime)
 
-    func pauseAndSave() {
-        player.pause()
-        saveCurrentProgress()
+      if seconds.isFinite && seconds > 0.5 {
+        savedProgress[url] = seconds
+      }
     }
+  }
 
-    func resume() {
-        player.play()
-    }
-    
-    deinit {
-        player.pause()
-        player.replaceCurrentItem(with: nil)
-    }
+  func pauseAndSave() {
+    player.pause()
+    saveCurrentProgress()
+  }
+
+  func resume() {
+    player.play()
+  }
 }
