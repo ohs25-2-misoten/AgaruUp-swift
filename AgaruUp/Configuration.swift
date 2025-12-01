@@ -10,8 +10,11 @@ import Foundation
 struct Configuration {
     static var environment: Environment {
         get {
-            let configuration = Bundle.main.object(forInfoDictionaryKey: "APIConfiguration") as! String
-            return Environment(rawValue: configuration)!
+            guard let configuration = Bundle.main.object(forInfoDictionaryKey: "APIConfiguration") as? String,
+            let env = Environment(rawValue: configuration) else {
+                fatalError("APIConfiguration value is invalid")
+            }
+            return env
         }
     }
 }
