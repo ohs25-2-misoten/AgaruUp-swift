@@ -24,47 +24,47 @@ struct MockInfoDictionaryProvider: InfoDictionaryProvider {
 
 struct ConfigurationTests {
     
-    // MARK: - Tests for getEnvironment(from:) method
+    // MARK: - Tests for environment(from:) method
     
-    @Test func getEnvironmentWithDebugConfiguration() {
+    @Test func environmentWithDebugConfiguration() {
         let mockProvider = MockInfoDictionaryProvider(infoDictionary: ["APIConfiguration": "Debug"])
-        let environment = Configuration.getEnvironment(from: mockProvider)
+        let environment = Configuration.environment(from: mockProvider)
         #expect(environment == .Debug)
     }
     
-    @Test func getEnvironmentWithStagingConfiguration() {
+    @Test func environmentWithStagingConfiguration() {
         let mockProvider = MockInfoDictionaryProvider(infoDictionary: ["APIConfiguration": "Staging"])
-        let environment = Configuration.getEnvironment(from: mockProvider)
+        let environment = Configuration.environment(from: mockProvider)
         #expect(environment == .Staging)
     }
     
-    @Test func getEnvironmentWithReleaseConfiguration() {
+    @Test func environmentWithReleaseConfiguration() {
         let mockProvider = MockInfoDictionaryProvider(infoDictionary: ["APIConfiguration": "Release"])
-        let environment = Configuration.getEnvironment(from: mockProvider)
+        let environment = Configuration.environment(from: mockProvider)
         #expect(environment == .Release)
     }
     
-    @Test func getEnvironmentWithInvalidConfigurationReturnsNil() {
+    @Test func environmentWithInvalidConfigurationReturnsNil() {
         let mockProvider = MockInfoDictionaryProvider(infoDictionary: ["APIConfiguration": "Invalid"])
-        let environment = Configuration.getEnvironment(from: mockProvider)
+        let environment = Configuration.environment(from: mockProvider)
         #expect(environment == nil)
     }
     
-    @Test func getEnvironmentWithEmptyConfigurationReturnsNil() {
+    @Test func environmentWithEmptyConfigurationReturnsNil() {
         let mockProvider = MockInfoDictionaryProvider(infoDictionary: ["APIConfiguration": ""])
-        let environment = Configuration.getEnvironment(from: mockProvider)
+        let environment = Configuration.environment(from: mockProvider)
         #expect(environment == nil)
     }
     
-    @Test func getEnvironmentWithMissingConfigurationReturnsNil() {
+    @Test func environmentWithMissingConfigurationReturnsNil() {
         let mockProvider = MockInfoDictionaryProvider(infoDictionary: [:])
-        let environment = Configuration.getEnvironment(from: mockProvider)
+        let environment = Configuration.environment(from: mockProvider)
         #expect(environment == nil)
     }
     
-    @Test func getEnvironmentWithWrongTypeConfigurationReturnsNil() {
+    @Test func environmentWithWrongTypeConfigurationReturnsNil() {
         let mockProvider = MockInfoDictionaryProvider(infoDictionary: ["APIConfiguration": 123])
-        let environment = Configuration.getEnvironment(from: mockProvider)
+        let environment = Configuration.environment(from: mockProvider)
         #expect(environment == nil)
     }
 }

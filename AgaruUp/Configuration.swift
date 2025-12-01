@@ -17,8 +17,7 @@ extension Bundle: InfoDictionaryProvider {}
 struct Configuration {
     static var environment: Environment {
         get {
-            guard let configuration = Bundle.main.object(forInfoDictionaryKey: "APIConfiguration") as? String,
-            let env = Environment(rawValue: configuration) else {
+            guard let env = environment(from: Bundle.main) else {
                 fatalError("APIConfiguration value is invalid")
             }
             return env
@@ -27,7 +26,7 @@ struct Configuration {
     
     /// Get environment from a provider (useful for testing)
     /// Returns nil if configuration is missing or invalid
-    static func getEnvironment(from provider: InfoDictionaryProvider) -> Environment? {
+    static func environment(from provider: InfoDictionaryProvider) -> Environment? {
         guard let configuration = provider.object(forInfoDictionaryKey: "APIConfiguration") as? String,
               let env = Environment(rawValue: configuration) else {
             return nil
