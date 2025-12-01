@@ -12,17 +12,17 @@ struct EnvironmentTests {
 
     @Test func debugEnvironmentReturnsCorrectBaseURL() {
         let environment = Environment.Debug
-        #expect(environment.baseUrl == "https://19977319-b30f-4d03-9b7b-6a9c89b89635.mock.pstmn.io")
+        #expect(environment.baseURL == "https://19977319-b30f-4d03-9b7b-6a9c89b89635.mock.pstmn.io")
     }
 
     @Test func stagingEnvironmentReturnsCorrectBaseURL() {
         let environment = Environment.Staging
-        #expect(environment.baseUrl == "https://19977319-b30f-4d03-9b7b-6a9c89b89635.mock.pstmn.io")
+        #expect(environment.baseURL == "https://19977319-b30f-4d03-9b7b-6a9c89b89635.mock.pstmn.io")
     }
 
     @Test func releaseEnvironmentReturnsCorrectBaseURL() {
         let environment = Environment.Release
-        #expect(environment.baseUrl == "https://agaruup-backend.kosuke.dev")
+        #expect(environment.baseURL == "https://agaruup-backend.kosuke.dev")
     }
 
     @Test func environmentRawValueInitialization() {
