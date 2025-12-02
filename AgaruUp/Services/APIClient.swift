@@ -37,8 +37,7 @@ final class APIClient: Sendable {
     
     private init() {
         // info.plistから環境設定を取得
-        self.baseURL = Configuration.environment.baseUrl
-
+        self.baseURL = Configuration.environment.baseURL
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         self.session = URLSession(configuration: config)
