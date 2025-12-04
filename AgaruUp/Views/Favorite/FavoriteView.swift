@@ -10,7 +10,6 @@ import AVKit
 // MARK: - Models
 
 struct FavoriteItem: Identifiable {
-    // FeedViewのID(String)に合わせてStringに変更しています
     let id: String
     let imageName: String
     let title: String
@@ -22,11 +21,9 @@ struct FavoriteItem: Identifiable {
 
 extension FavoriteItem {
     static let mocks: [FavoriteItem] = [
-        // FeedViewへ飛ばしたいIDを設定します
-        // ※Assetsに "photo01" などの画像がある前提です
         FavoriteItem(id: "video_1", imageName: "photo01", title: "過去一アガった瞬間！！", location: "大阪府大阪市北区梅田hoge", createdDate: "2025/11/19 生成"),
         FavoriteItem(id: "video_2", imageName: "photo02", title: "過去一アガった瞬間！！", location: "大阪府大阪市北区梅田hoge", createdDate: "2025/11/19 生成"),
-        FavoriteItem(id: "video_3", imageName: "photo03", title: "過去一アガった瞬間！！", location: "大阪府大阪市北区梅田hoge", createdDate: "2025/11/20 生成")
+        FavoriteItem(id: "video_3", imageName: "photo03", title: "最高のデザート", location: "東京都渋谷区", createdDate: "2025/11/20 生成")
     ]
 }
 
@@ -34,8 +31,6 @@ extension FavoriteItem {
 
 struct FavoriteView: View {
     @State private var isShowingSearch = false
-    
-    // プロジェクト内に既にある本物の VideoPlaybackManager を使用します
     @State private var playbackManager = VideoPlaybackManager()
     
     private let columns = [
@@ -77,14 +72,12 @@ struct FavoriteView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 24) {
                         ForEach(items) { item in
-                            // タップしたらFeedViewへ遷移
+                            // 別ファイルに切り出した View を使用
                             NavigationLink {
-                                // プロジェクト既存の FeedView を呼び出す
                                 FeedView(playbackManager: playbackManager)
                             } label: {
                                 FavoriteGridItemView(item: item)
                             }
-                            // ボタンの見た目（青文字など）にならないようプレーンスタイルにする
                             .buttonStyle(.plain)
                         }
                     }
@@ -93,48 +86,9 @@ struct FavoriteView: View {
                     .padding(.bottom, 80)
                 }
             }
-            // ツールバーを隠してカスタムヘッダーを使う設定
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isShowingSearch) {
                 SearchView()
-            }
-        }
-    }
-}
-
-/// グリッド内の個別のアイテムビュー
-struct FavoriteGridItemView: View {
-    let item: FavoriteItem
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            GeometryReader { geometry in
-                // 画像を表示（Assetsに画像がない場合はグレー背景になります）
-                Image(item.imageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .clipped()
-                    .background(Color.gray.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            .aspectRatio(3 / 4, contentMode: .fit)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.callout)
-                    .fontWeight(.bold)
-                    .lineLimit(1)
-                    .foregroundStyle(.primary)
-                
-                Text(item.location)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                
-                Text(item.createdDate)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
     }
