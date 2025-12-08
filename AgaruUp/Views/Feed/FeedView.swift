@@ -10,62 +10,88 @@ import AVKit
 
 struct FeedView: View {
   @Bindable var playbackManager: VideoPlaybackManager
-  @State private var posts: [Post] = []
+  @State private var videos: [Video] = []
   @State private var scrollPosition: String?
+  @State private var isLoading = false
+  @State private var errorMessage: String?
 
-  private let videoUrls = [
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
-  ]
+  private let videoService = VideoService.shared
 
   var body: some View {
-    ScrollView {
-      LazyVStack(spacing: 0) {
-        ForEach(posts) { post in
-          FeedCell(post: post, player: playbackManager.player)
-            .id(post.id)
-            .onAppear { playInitialVideoIfNecessary() }
+    ZStack {
+      if isLoading && videos.isEmpty {
+        ProgressView("動画を読み込み中...")
+      } else if let errorMessage = errorMessage, videos.isEmpty {
+        VStack {
+          Text("エラー")
+            .font(.headline)
+          Text(errorMessage)
+            .font(.caption)
+            .foregroundColor(.secondary)
+          Button("再試行") {
+            Task {
+              await loadVideos()
+            }
+          }
+          .padding()
+        }
+      } else {
+        ScrollView {
+          LazyVStack(spacing: 0) {
+            ForEach(videos) { video in
+              FeedCell(video: video, player: playbackManager.player)
+                .id(video.id)
+                .onAppear { playInitialVideoIfNecessary() }
+            }
+          }
+          .scrollTargetLayout()
+        }
+        .scrollPosition(id: $scrollPosition)
+        .scrollTargetBehavior(.paging)
+        .ignoresSafeArea()
+        .onChange(of: scrollPosition) { _, newValue in
+          playVideoOnChangeOfScrollPosition(videoId: newValue)
         }
       }
-      .scrollTargetLayout()
     }
-    .onAppear {
-      loadPosts()
-      if let firstPost = posts.first, let url = URL(string: firstPost.videoUrl) {
-        playbackManager.loadVideo(url: url)
-      }
+    .task {
+      await loadVideos()
     }
     .onDisappear {
       playbackManager.pauseAndSave()
     }
-    .scrollPosition(id: $scrollPosition)
-    .scrollTargetBehavior(.paging)
-    .ignoresSafeArea()
-    .onChange(of: scrollPosition) { _, newValue in
-      playVideoOnChangeOfScrollPosition(postId: newValue)
-    }
   }
 
-  private func loadPosts() {
-    posts = [
-      .init(id: UUID().uuidString, videoUrl: videoUrls[0]),
-      .init(id: UUID().uuidString, videoUrl: videoUrls[1]),
-      .init(id: UUID().uuidString, videoUrl: videoUrls[0]),
-    ]
+  private func loadVideos() async {
+    isLoading = true
+    errorMessage = nil
+    
+    do {
+      videos = try await videoService.searchVideos(limit: 10)
+      
+      if let firstVideo = videos.first, let url = URL(string: firstVideo.videoUrl) {
+        playbackManager.loadVideo(url: url)
+      }
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+    
+    isLoading = false
   }
 
   private func playInitialVideoIfNecessary() {
     guard
       scrollPosition == nil,
-      let post = posts.first
+      let video = videos.first,
+      let url = URL(string: video.videoUrl)
     else { return }
 
-    playbackManager.loadVideo(url: URL(string: post.videoUrl)!)
+    playbackManager.loadVideo(url: url)
   }
 
-  private func playVideoOnChangeOfScrollPosition(postId: String?) {
-    guard let currentPost = posts.first(where: { $0.id == postId }),
-          let url = URL(string: currentPost.videoUrl)
+  private func playVideoOnChangeOfScrollPosition(videoId: String?) {
+    guard let currentVideo = videos.first(where: { $0.id == videoId }),
+          let url = URL(string: currentVideo.videoUrl)
     else { return }
 
     playbackManager.loadVideo(url: url)
