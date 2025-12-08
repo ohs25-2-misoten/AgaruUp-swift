@@ -7,28 +7,6 @@
 import SwiftUI
 import AVKit
 
-// MARK: - Models
-
-struct FavoriteItem: Identifiable {
-    let id: String
-    let imageName: String
-    let title: String
-    let location: String
-    let createdDate: String
-}
-
-// MARK: - Mock Data
-
-extension FavoriteItem {
-    static let mocks: [FavoriteItem] = [
-        FavoriteItem(id: "video_1", imageName: "photo01", title: "過去一アガった瞬間！！", location: "大阪府大阪市北区梅田hoge", createdDate: "2025/11/19 生成"),
-        FavoriteItem(id: "video_2", imageName: "photo02", title: "過去一アガった瞬間！！", location: "大阪府大阪市北区梅田hoge", createdDate: "2025/11/19 生成"),
-        FavoriteItem(id: "video_3", imageName: "photo03", title: "最高のデザート", location: "東京都渋谷区", createdDate: "2025/11/20 生成")
-    ]
-}
-
-// MARK: - Views
-
 struct FavoriteView: View {
     @State private var isShowingSearch = false
     @State private var playbackManager = VideoPlaybackManager()
@@ -38,6 +16,7 @@ struct FavoriteView: View {
         GridItem(.flexible(), spacing: 15)
     ]
     
+    // 別ファイル(FavoriteItem.swift)にある定義を使用
     private let items = FavoriteItem.mocks
 
     var body: some View {
@@ -72,7 +51,7 @@ struct FavoriteView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 24) {
                         ForEach(items) { item in
-                            // 別ファイルに切り出した View を使用
+                            // 別ファイル(FavoriteGridItemView.swift)にあるコンポーネントを使用
                             NavigationLink {
                                 FeedView(playbackManager: playbackManager)
                             } label: {
