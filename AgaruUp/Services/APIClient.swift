@@ -46,7 +46,7 @@ final class APIClient: Sendable {
     // MARK: - Generic Request
     
     /// 汎用的なGETリクエスト
-    func get<T: Decodable>(_ endpoint: String) async throws -> T {
+    nonisolated func get<T: Decodable>(_ endpoint: String) async throws -> T {
         guard let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
         }
@@ -75,7 +75,7 @@ final class APIClient: Sendable {
     }
     
     /// クエリパラメータ付きGETリクエスト
-    func get<T: Decodable>(_ endpoint: String, queryItems: [URLQueryItem]) async throws -> T {
+    nonisolated func get<T: Decodable>(_ endpoint: String, queryItems: [URLQueryItem]) async throws -> T {
         var components = URLComponents(string: baseURL + endpoint)
         
         // 空でないクエリアイテムのみ追加
@@ -112,7 +112,7 @@ final class APIClient: Sendable {
     }
     
     /// 汎用的なPOSTリクエスト
-    func post<T: Decodable, U: Encodable>(_ endpoint: String, body: U) async throws -> T {
+    nonisolated func post<T: Decodable, U: Encodable>(_ endpoint: String, body: U) async throws -> T {
         guard let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
         }

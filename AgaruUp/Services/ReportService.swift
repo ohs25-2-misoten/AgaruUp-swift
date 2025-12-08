@@ -8,7 +8,7 @@
 import Foundation
 
 /// アゲ報告の応答モデル
-struct ReportResponse: Codable, Sendable {
+nonisolated struct ReportResponse: Codable, Sendable {
     /// レポートID
     let id: String?
     /// ステータス
