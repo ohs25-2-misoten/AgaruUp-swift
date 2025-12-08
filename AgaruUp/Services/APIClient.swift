@@ -74,6 +74,43 @@ final class APIClient: Sendable {
         }
     }
     
+    /// クエリパラメータ付きGETリクエスト
+    func get<T: Decodable>(_ endpoint: String, queryItems: [URLQueryItem]) async throws -> T {
+        var components = URLComponents(string: baseURL + endpoint)
+        
+        // 空でないクエリアイテムのみ追加
+        let validQueryItems = queryItems.filter { $0.value != nil && !($0.value?.isEmpty ?? true) }
+        if !validQueryItems.isEmpty {
+            components?.queryItems = validQueryItems
+        }
+        
+        guard let url = components?.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.invalidResponse
+            }
+            
+            let decoder = JSONDecoder()
+            return try decoder.decode(T.self, from: data)
+        } catch let error as APIError {
+            throw error
+        } catch let error as DecodingError {
+            throw APIError.decodingError(error)
+        } catch {
+            throw APIError.networkError(error)
+        }
+    }
+    
     /// 汎用的なPOSTリクエスト
     func post<T: Decodable, U: Encodable>(_ endpoint: String, body: U) async throws -> T {
         guard let url = URL(string: baseURL + endpoint) else {
