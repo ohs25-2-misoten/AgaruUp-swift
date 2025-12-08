@@ -9,7 +9,7 @@ import SwiftUI
 import AVKit
 
 struct FeedCell: View {
-  let post: Post
+  let video: Video
   var player: AVPlayer
 
   var body: some View {
@@ -19,12 +19,16 @@ struct FeedCell: View {
       VStack {
         Spacer()
         HStack {
-          VStack(alignment: .leading) {
-            Text("") // Title
-            Text("") // 生成日
+          VStack(alignment: .leading, spacing: 4) {
+            Text(video.title)
+              .font(.headline)
+              .lineLimit(2)
+            if let date = video.generatedAt {
+              Text(formatDate(date))
+                .font(.caption)
+            }
           }
           .foregroundStyle(.white)
-          .font(.subheadline)
           
           Spacer()
           
@@ -36,9 +40,6 @@ struct FeedCell: View {
                   .resizable()
                   .frame(width: 20, height: 20)
                   .foregroundStyle(.white)
-                Text("1.2K") // WebAPIから取得した値にリプレース予定
-                  .font(.caption)
-                  .foregroundStyle(.white)
               }
             }
             
@@ -48,9 +49,6 @@ struct FeedCell: View {
                 Image(systemName: "ellipsis.bubble.fill")
                   .resizable()
                   .frame(width: 20, height: 20)
-                  .foregroundStyle(.white)
-                Text("345") // WebAPIから取得した値にリプレース予定
-                  .font(.caption)
                   .foregroundStyle(.white)
               }
             }
@@ -72,5 +70,13 @@ struct FeedCell: View {
         break
       }
     }
+  }
+  
+  private func formatDate(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .short
+    formatter.locale = Locale(identifier: "ja_JP")
+    return formatter.string(from: date)
   }
 }
