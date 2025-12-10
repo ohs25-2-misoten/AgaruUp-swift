@@ -14,8 +14,16 @@ struct FeedView: View {
   @State private var scrollPosition: String?
   @State private var isLoading = false
   @State private var errorMessage: String?
+  
+  /// 特定の動画IDから開始する場合に指定
+  let initialVideoId: String?
 
   private let videoService = VideoService.shared
+  
+  init(playbackManager: VideoPlaybackManager, initialVideoId: String? = nil) {
+    self.playbackManager = playbackManager
+    self.initialVideoId = initialVideoId
+  }
 
   var body: some View {
     ZStack {
@@ -57,6 +65,12 @@ struct FeedView: View {
     .task {
       await loadVideos()
     }
+    .onAppear {
+      // 初期動画IDが指定されている場合は、その動画にスクロール
+      if let initialVideoId = initialVideoId {
+        scrollPosition = initialVideoId
+      }
+    }
     .onDisappear {
       playbackManager.pauseAndSave()
     }
@@ -67,7 +81,26 @@ struct FeedView: View {
     errorMessage = nil
     
     do {
-      videos = try await videoService.searchVideos(limit: 10)
+      var loadedVideos = try await videoService.searchVideos(limit: 10)
+      
+      // 初期動画IDが指定されている場合
+      if let initialVideoId = initialVideoId {
+        // 指定された動画を取得
+        let initialVideos = try await videoService.getBulkVideos(videoIds: [initialVideoId])
+        
+        if let initialVideo = initialVideos.first {
+          // おすすめ動画リストから同じIDの動画を削除（重複を防ぐ）
+          loadedVideos.removeAll { $0.movieId == initialVideoId }
+          
+          // 先頭に初期動画を追加
+          videos = [initialVideo] + loadedVideos
+        } else {
+          // 初期動画が取得できなかった場合は通常のリストを使用
+          videos = loadedVideos
+        }
+      } else {
+        videos = loadedVideos
+      }
       
       if let firstVideo = videos.first, let url = URL(string: firstVideo.videoUrl) {
         playbackManager.loadVideo(url: url)
