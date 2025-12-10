@@ -11,6 +11,11 @@ import AVKit
 struct FeedCell: View {
   let video: Video
   var player: AVPlayer
+  
+  @State private var isFavorite = false
+  @State private var isAnimating = false
+  
+  private let favoriteService = FavoriteService.shared
 
   var body: some View {
     ZStack {
@@ -34,12 +39,15 @@ struct FeedCell: View {
           
           VStack(spacing: 28) {
             Button {
+              handleFavoriteTap()
             } label: {
               VStack {
-                Image(systemName: "heart.fill")
+                Image(systemName: isFavorite ? "heart.fill" : "heart")
                   .resizable()
                   .frame(width: 20, height: 20)
-                  .foregroundStyle(.white)
+                  .foregroundStyle(isFavorite ? .red : .white)
+                  .scaleEffect(isAnimating ? 1.3 : 1.0)
+                  .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isAnimating)
               }
             }
             
@@ -70,6 +78,9 @@ struct FeedCell: View {
         break
       }
     }
+    .task {
+      await loadFavoriteStatus()
+    }
   }
   
   private func formatDate(_ date: Date) -> String {
@@ -78,5 +89,31 @@ struct FeedCell: View {
     formatter.timeStyle = .short
     formatter.locale = Locale(identifier: "ja_JP")
     return formatter.string(from: date)
+  }
+  
+  @MainActor
+  private func loadFavoriteStatus() async {
+    do {
+      isFavorite = try favoriteService.isFavorite(movieId: video.movieId)
+    } catch {
+      print("お気に入り状態の読み込みエラー: \(error)")
+    }
+  }
+  
+  @MainActor
+  private func handleFavoriteTap() {
+    Task {
+      do {
+        let newState = try favoriteService.toggleFavorite(movieId: video.movieId)
+        isFavorite = newState
+        
+        // アニメーション
+        isAnimating = true
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        isAnimating = false
+      } catch {
+        print("お気に入りの切り替えエラー: \(error)")
+      }
+    }
   }
 }
