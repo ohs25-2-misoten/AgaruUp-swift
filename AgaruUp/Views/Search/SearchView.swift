@@ -50,24 +50,22 @@ struct SearchView: View {
       }
       
       Spacer()
-      Button {
-        
-      } label: {
-        Text("検索")
-          .font(.headline)
-          .padding(.vertical, 12)
-          .frame(maxWidth: .infinity)
-          .background(Color("background"))
-          .foregroundColor(.white)
-          .cornerRadius(12)
-          .shadow(color: Color("background").opacity(0.4), radius: 5, x: 0, y: 5)
-      }
+        Button(action: handleSearch) {
+            Text("検索")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glassProminent)
+        .controlSize(.extraLarge)
     }
     .padding()
     .task {
       await loadTags()
     }
   }
+    
+    private func handleSearch() {
+        // TODO: 検索と統合
+    }
   
   private func loadTags() async {
     isLoading = true
