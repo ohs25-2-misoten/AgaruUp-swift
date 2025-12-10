@@ -142,9 +142,32 @@ EOF
             const prNumber = '${{ steps.find_pr.outputs.pr_number }}';
             const releaseUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${version}`;
             
-            await github.rest.issues.createComment({
+            const commentBody = `🚀 **GitHub Release Created**\n\n✅ Release v${version} is now available!\n\n🔗 [View Release](${releaseUrl})\n\n---\nXcode Cloud will build and deploy this version to App Store Connect automatically.`;
+            
+            // 既存コメントを取得
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `🚀 **GitHub Release Created**\n\n✅ Release v${version} is now available!\n\n🔗 [View Release](${releaseUrl})\n\n---\nXcode Cloud will build and deploy this version to App Store Connect automatically.`
             });
+            
+            // 既存のリリースコメントを検索
+            const releaseComment = comments.find(c => c.body && c.body.startsWith('🚀 **GitHub Release Created**'));
+            
+            if (releaseComment) {
+              // コメントを更新
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: releaseComment.id,
+                body: commentBody,
+              });
+            } else {
+              // 新規コメントを作成
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody,
+              });
+            }
