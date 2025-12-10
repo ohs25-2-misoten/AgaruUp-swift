@@ -25,7 +25,11 @@ jobs:
         id: extract_version
         run: |
           BRANCH_NAME="${{ github.head_ref }}"
-          VERSION=$(echo $BRANCH_NAME | sed 's/release\/bump-version-//')
+          VERSION=$(echo "$BRANCH_NAME" | sed 's/release\/bump-version-//')
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            exit 1
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📌 Extracted version: $VERSION"
       
