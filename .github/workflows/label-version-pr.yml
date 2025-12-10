@@ -1,0 +1,119 @@
+name: Label Version PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+jobs:
+  label-version:
+    name: Add Version Labels to Release PR
+    if: startsWith(github.head_ref, 'release/bump-version-')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      
+      - name: Extract version from branch name
+        id: extract_version
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          VERSION=$(echo $BRANCH_NAME | sed 's/release\/bump-version-//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📌 Extracted version: $VERSION"
+      
+      - name: Verify version in project file
+        id: verify_version
+        run: |
+          PROJECT_VERSION=$(grep -m 1 "MARKETING_VERSION" AgaruUp.xcodeproj/project.pbxproj | sed 's/.*MARKETING_VERSION = \(.*\);/\1/' | tr -d ' ')
+          EXPECTED_VERSION="${{ steps.extract_version.outputs.version }}"
+          
+          echo "Project version: $PROJECT_VERSION"
+          echo "Expected version: $EXPECTED_VERSION"
+          
+          if [ "$PROJECT_VERSION" = "$EXPECTED_VERSION" ]; then
+            echo "verified=true" >> $GITHUB_OUTPUT
+            echo "✅ Version matches!"
+          else
+            echo "verified=false" >> $GITHUB_OUTPUT
+            echo "❌ Version mismatch! Project has $PROJECT_VERSION but branch expects $EXPECTED_VERSION"
+            exit 1
+          fi
+      
+      - name: Add version and release labels
+        if: steps.verify_version.outputs.verified == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.extract_version.outputs.version }}';
+            const versionLabelName = `version: ${version}`;
+            
+            // 既存のversionラベルを削除
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            for (const label of labels) {
+              if (label.name.startsWith('version: ')) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: label.name
+                });
+              }
+            }
+            
+            // 必要なラベルを作成（存在しない場合）
+            const labelsToCreate = [
+              { name: versionLabelName, color: '0e8a16', description: `Release version ${version}` },
+              { name: 'release', color: 'd73a4a', description: 'Release PR' }
+            ];
+            
+            for (const labelDef of labelsToCreate) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: labelDef.name,
+                  color: labelDef.color,
+                  description: labelDef.description
+                });
+                console.log(`✅ Created label: ${labelDef.name}`);
+              } catch (error) {
+                console.log(`ℹ️ Label already exists: ${labelDef.name}`);
+              }
+            }
+            
+            // ラベルを追加
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [versionLabelName, 'release']
+            });
+            
+            console.log(`🏷️ Added labels: ${versionLabelName}, release`);
+      
+      - name: Comment on PR
+        if: steps.verify_version.outputs.verified == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.extract_version.outputs.version }}';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🎯 **Version Verification Complete**\n\n✅ Version \`${version}\` has been verified in the project file.\n\nThis PR is labeled for release and will trigger automatic tag creation and GitHub Release when merged to \`main\`.`
+            });
