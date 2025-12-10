@@ -115,9 +115,11 @@ ${{ steps.changelog.outputs.changelog }}
 ---
 **Full Changelog**: https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo 'initial')...$TAG"
           
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          cat >> $GITHUB_OUTPUT <<EOF
+notes<<NOTES_EOF
+$NOTES
+NOTES_EOF
+EOF
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
