@@ -5,16 +5,16 @@
 //  Created by 拓実 on 2025/11/17.
 //
 
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct FeedCell: View {
   let video: Video
   var player: AVPlayer
-  
+
   @State private var isFavorite = false
   @State private var isAnimating = false
-  
+
   private let favoriteService = FavoriteService.shared
 
   var body: some View {
@@ -34,9 +34,9 @@ struct FeedCell: View {
             }
           }
           .foregroundStyle(.white)
-          
+
           Spacer()
-          
+
           VStack(spacing: 28) {
             Button {
               handleFavoriteTap()
@@ -50,7 +50,7 @@ struct FeedCell: View {
                   .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isAnimating)
               }
             }
-            
+
             Button {
             } label: {
               VStack {
@@ -82,7 +82,7 @@ struct FeedCell: View {
       await loadFavoriteStatus()
     }
   }
-  
+
   private func formatDate(_ date: Date) -> String {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
@@ -90,7 +90,7 @@ struct FeedCell: View {
     formatter.locale = Locale(identifier: "ja_JP")
     return formatter.string(from: date)
   }
-  
+
   @MainActor
   private func loadFavoriteStatus() async {
     do {
@@ -99,14 +99,14 @@ struct FeedCell: View {
       print("お気に入り状態の読み込みエラー: \(error)")
     }
   }
-  
+
   @MainActor
   private func handleFavoriteTap() {
     Task {
       do {
         let newState = try favoriteService.toggleFavorite(movieId: video.movieId)
         isFavorite = newState
-        
+
         // アニメーション
         isAnimating = true
         try? await Task.sleep(nanoseconds: 300_000_000)

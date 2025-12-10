@@ -5,8 +5,8 @@
 //  Created by 拓実 on 2025/11/27.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 import SwiftUI
 
 @Observable
@@ -56,7 +56,8 @@ final class VideoPlaybackManager {
     if let savedTime = savedProgress[urlString] {
       let time = CMTime(seconds: savedTime, preferredTimescale: 600)
 
-      player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] isFinished in
+      player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) {
+        [weak self] isFinished in
         if isFinished {
           self?.player.play()
         }

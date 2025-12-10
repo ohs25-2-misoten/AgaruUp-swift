@@ -5,8 +5,8 @@
 //  Created by 拓実 on 2025/11/17.
 //
 
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct FeedView: View {
   @Bindable var playbackManager: VideoPlaybackManager
@@ -14,12 +14,12 @@ struct FeedView: View {
   @State private var scrollPosition: String?
   @State private var isLoading = false
   @State private var errorMessage: String?
-  
+
   /// 特定の動画IDから開始する場合に指定
   let initialVideoId: String?
 
   private let videoService = VideoService.shared
-  
+
   init(playbackManager: VideoPlaybackManager, initialVideoId: String? = nil) {
     self.playbackManager = playbackManager
     self.initialVideoId = initialVideoId
@@ -79,19 +79,19 @@ struct FeedView: View {
   private func loadVideos() async {
     isLoading = true
     errorMessage = nil
-    
+
     do {
       var loadedVideos = try await videoService.searchVideos(limit: 10)
-      
+
       // 初期動画IDが指定されている場合
       if let initialVideoId = initialVideoId {
         // 指定された動画を取得
         let initialVideos = try await videoService.getBulkVideos(videoIds: [initialVideoId])
-        
+
         if let initialVideo = initialVideos.first {
           // おすすめ動画リストから同じIDの動画を削除（重複を防ぐ）
           loadedVideos.removeAll { $0.movieId == initialVideoId }
-          
+
           // 先頭に初期動画を追加
           videos = [initialVideo] + loadedVideos
         } else {
@@ -101,14 +101,14 @@ struct FeedView: View {
       } else {
         videos = loadedVideos
       }
-      
+
       if let firstVideo = videos.first, let url = URL(string: firstVideo.videoUrl) {
         playbackManager.loadVideo(url: url)
       }
     } catch {
       errorMessage = error.localizedDescription
     }
-    
+
     isLoading = false
   }
 
@@ -124,7 +124,7 @@ struct FeedView: View {
 
   private func playVideoOnChangeOfScrollPosition(videoId: String?) {
     guard let currentVideo = videos.first(where: { $0.id == videoId }),
-          let url = URL(string: currentVideo.videoUrl)
+      let url = URL(string: currentVideo.videoUrl)
     else { return }
 
     playbackManager.loadVideo(url: url)

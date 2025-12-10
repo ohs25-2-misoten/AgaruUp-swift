@@ -12,14 +12,14 @@ struct SearchView: View {
   @State private var tags: [String] = []
   @State private var isLoading = false
   @State private var errorMessage: String?
-  
+
   private let tagService = TagService.shared
-  
+
   var body: some View {
     VStack {
       TextField("Search", text: $searchText)
         .textFieldStyle(.withCancel)
-      
+
       if isLoading && tags.isEmpty {
         ProgressView("タグを読み込み中...")
           .padding()
@@ -48,35 +48,35 @@ struct SearchView: View {
           }
         }
       }
-      
+
       Spacer()
-        Button(action: handleSearch) {
-            Text("検索")
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.glassProminent)
-        .controlSize(.extraLarge)
+      Button(action: handleSearch) {
+        Text("検索")
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.glassProminent)
+      .controlSize(.extraLarge)
     }
     .padding()
     .task {
       await loadTags()
     }
   }
-    
-    private func handleSearch() {
-        // TODO: 検索と統合
-    }
-  
+
+  private func handleSearch() {
+    // TODO: 検索と統合
+  }
+
   private func loadTags() async {
     isLoading = true
     errorMessage = nil
-    
+
     do {
       tags = try await tagService.getTags()
     } catch {
       errorMessage = error.localizedDescription
     }
-    
+
     isLoading = false
   }
 }
