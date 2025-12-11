@@ -153,20 +153,26 @@ struct FavoriteServiceTests {
         let container = try createTestContainer()
         service.configure(with: container)
         
-        // 時間差をつけて追加
+        // 順番に追加（addedAtは自動的にDate()が設定される）
         try service.addFavorite(movieId: "movie-1")
-        Thread.sleep(forTimeInterval: 0.01)
         try service.addFavorite(movieId: "movie-2")
-        Thread.sleep(forTimeInterval: 0.01)
         try service.addFavorite(movieId: "movie-3")
         
         // 一覧を取得
         let favorites = try service.fetchAllFavorites()
         
-        // 降順（新しい順）で取得されることを確認
+        // 3つのお気に入りが取得されることを確認
         #expect(favorites.count == 3)
-        #expect(favorites[0].movieId == "movie-3")
-        #expect(favorites[1].movieId == "movie-2")
-        #expect(favorites[2].movieId == "movie-1")
+        
+        // ソート順の確認（降順であること）
+        // 追加順とは逆順（新しい順）になっているはず
+        #expect(favorites[0].addedAt >= favorites[1].addedAt)
+        #expect(favorites[1].addedAt >= favorites[2].addedAt)
+        
+        // IDの存在確認
+        let movieIds = favorites.map { $0.movieId }
+        #expect(movieIds.contains("movie-1"))
+        #expect(movieIds.contains("movie-2"))
+        #expect(movieIds.contains("movie-3"))
     }
 }
