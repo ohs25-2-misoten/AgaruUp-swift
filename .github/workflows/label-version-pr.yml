@@ -39,6 +39,11 @@ jobs:
           PROJECT_VERSION=$(grep -m 1 "MARKETING_VERSION" AgaruUp.xcodeproj/project.pbxproj | sed 's/.*MARKETING_VERSION = \(.*\);/\1/' | tr -d ' ')
           EXPECTED_VERSION="${{ steps.extract_version.outputs.version }}"
           
+          if [ -z "$PROJECT_VERSION" ]; then
+            echo "❌ Failed to extract MARKETING_VERSION from project file"
+            exit 1
+          fi
+          
           echo "Project version: $PROJECT_VERSION"
           echo "Expected version: $EXPECTED_VERSION"
           
