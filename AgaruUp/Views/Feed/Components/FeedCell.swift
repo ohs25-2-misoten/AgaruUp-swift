@@ -83,12 +83,16 @@ struct FeedCell: View {
     }
   }
 
-  private func formatDate(_ date: Date) -> String {
+  private static let dateFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
     formatter.timeStyle = .short
     formatter.locale = Locale(identifier: "ja_JP")
-    return formatter.string(from: date)
+    return formatter
+  }()
+
+  private func formatDate(_ date: Date) -> String {
+    Self.dateFormatter.string(from: date)
   }
 
   @MainActor
