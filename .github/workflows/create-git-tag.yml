@@ -1,0 +1,122 @@
+name: Create Git Tag
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-tag:
+    name: Create Tag from Merged Release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get merged PR information
+        id: get_pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commit = context.sha;
+            
+            // このコミットに関連するPRを検索
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commit
+            });
+            
+            const mergedPR = prs.find(pr => pr.merged_at !== null);
+            
+            if (!mergedPR) {
+              console.log('ℹ️ No merged PR found for this commit');
+              core.setOutput('should_create_tag', 'false');
+              return;
+            }
+            
+            console.log(`✅ Found merged PR #${mergedPR.number}: ${mergedPR.title}`);
+            
+            // versionラベルとreleaseラベルをチェック
+            const versionLabel = mergedPR.labels.find(label => label.name.startsWith('version: '));
+            const hasReleaseLabel = mergedPR.labels.some(label => label.name === 'release');
+            
+            if (versionLabel && hasReleaseLabel) {
+              const version = versionLabel.name.replace('version: ', '');
+              console.log(`🏷️ Version: ${version}`);
+              core.setOutput('should_create_tag', 'true');
+              core.setOutput('version', version);
+              core.setOutput('pr_number', mergedPR.number);
+              core.setOutput('pr_title', mergedPR.title);
+              core.setOutput('pr_body', mergedPR.body || '');
+              core.setOutput('pr_url', mergedPR.html_url);
+            } else {
+              console.log('ℹ️ PR does not have both version and release labels');
+              core.setOutput('should_create_tag', 'false');
+            }
+      
+      - name: Check if tag already exists
+        if: steps.get_pr.outputs.should_create_tag == 'true'
+        id: check_tag
+        run: |
+          VERSION="${{ steps.get_pr.outputs.version }}"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Tag v$VERSION already exists"
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Tag v$VERSION does not exist, will create it"
+          fi
+      
+      - name: Create and push Git tag
+        if: steps.get_pr.outputs.should_create_tag == 'true' && steps.check_tag.outputs.tag_exists == 'false'
+        run: |
+          VERSION="${{ steps.get_pr.outputs.version }}"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git tag -a "v$VERSION" -m "Release version $VERSION
+
+Released from PR #${{ steps.get_pr.outputs.pr_number }}
+${{ steps.get_pr.outputs.pr_title }}"
+          
+          git push origin "v$VERSION"
+          
+          echo "🚀 Created and pushed tag v$VERSION"
+      
+      - name: Comment on PR with tag info
+        if: steps.get_pr.outputs.should_create_tag == 'true' && steps.check_tag.outputs.tag_exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.get_pr.outputs.version }}';
+            const prNumber = '${{ steps.get_pr.outputs.pr_number }}';
+            const commentBody = `🏷️ **Git Tag Created**\n\nTag \`v${version}\` has been created and pushed.\n\n➡️ GitHub Release will be created automatically.`;
+            
+            // 既存コメントを取得
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+            
+            // 同じ内容のコメントが既に存在するかチェック
+            const alreadyCommented = comments.some(c => c.body && c.body.includes(`🏷️ **Git Tag Created**`) && c.body.includes(`Tag \`v${version}\``));
+            
+            if (!alreadyCommented) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+            } else {
+              console.log('同じタグコメントが既に存在するため、新規コメントは投稿しません。');
+            }
