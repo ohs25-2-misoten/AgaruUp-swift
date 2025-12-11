@@ -98,10 +98,25 @@ ${{ steps.get_pr.outputs.pr_title }}"
           script: |
             const version = '${{ steps.get_pr.outputs.version }}';
             const prNumber = '${{ steps.get_pr.outputs.pr_number }}';
+            const commentBody = `🏷️ **Git Tag Created**\n\nTag \`v${version}\` has been created and pushed.\n\n➡️ GitHub Release will be created automatically.`;
             
-            await github.rest.issues.createComment({
+            // 既存コメントを取得
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `🏷️ **Git Tag Created**\n\nTag \`v${version}\` has been created and pushed.\n\n➡️ GitHub Release will be created automatically.`
             });
+            
+            // 同じ内容のコメントが既に存在するかチェック
+            const alreadyCommented = comments.some(c => c.body && c.body.includes(`🏷️ **Git Tag Created**`) && c.body.includes(`Tag \`v${version}\``));
+            
+            if (!alreadyCommented) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+            } else {
+              console.log('同じタグコメントが既に存在するため、新規コメントは投稿しません。');
+            }
