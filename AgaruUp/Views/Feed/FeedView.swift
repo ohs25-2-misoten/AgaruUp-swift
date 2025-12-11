@@ -64,9 +64,7 @@ struct FeedView: View {
     }
     .task {
       await loadVideos()
-    }
-    .onAppear {
-      // 初期動画IDが指定されている場合は、その動画にスクロール
+      // loadVideos完了後にスクロール位置を設定
       if let initialVideoId = initialVideoId {
         scrollPosition = initialVideoId
       }

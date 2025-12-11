@@ -9,6 +9,23 @@ import Foundation
 import SwiftData
 
 /// お気に入り動画を管理するサービス
+///
+/// **スレッドセーフティに関する注意:**
+/// - 全てのメソッドは@MainActorで保護されており、メインスレッドでの実行が保証されています
+/// - ModelContextはスレッドセーフではないため、必ずメインスレッドから呼び出してください
+/// - 複数のビューから同時にアクセスされる可能性がありますが、@MainActorにより
+///   操作は順次実行されるため、競合状態は発生しません
+///
+/// **使用方法:**
+/// ```swift
+/// // アプリ起動時に一度だけ設定
+/// FavoriteService.shared.configure(with: modelContainer)
+///
+/// // 各ビューから使用
+/// Task { @MainActor in
+///   try await FavoriteService.shared.addFavorite(movieId: "movie-id")
+/// }
+/// ```
 @MainActor
 final class FavoriteService {
   static let shared = FavoriteService()
