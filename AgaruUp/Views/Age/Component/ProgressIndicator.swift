@@ -13,7 +13,7 @@ struct ProgressIndicator: View {
   private let stepAmount: Double = 0.1
   private let backgroundColor = Color.gray.opacity(0.3)
   private let indicatorColor = Color.orange
-  var action: () -> Void = { }
+  var action: () -> Void = {}
 
   var body: some View {
     VStack(spacing: 25) {
@@ -39,18 +39,12 @@ struct ProgressIndicator: View {
       Button(action: {
         progress = min(1.0, progress + stepAmount)
       }) {
-        Label("アガる", systemImage: "")
-          .font(.headline)
-          .padding(.vertical, 12)
+        Text("アガる")
           .frame(maxWidth: .infinity)
-          .background(indicatorColor)
-          .foregroundColor(.white)
-          .cornerRadius(12)
-          .shadow(color: indicatorColor.opacity(0.4), radius: 5, x: 0, y: 5)
       }
       .frame(maxWidth: 300)
-      .disabled(progress >= 1.0)
-      .opacity(progress >= 1.0 ? 0.6 : 1.0)
+      .buttonStyle(.glassProminent)
+      .controlSize(.extraLarge)
     }
     .padding()
   }

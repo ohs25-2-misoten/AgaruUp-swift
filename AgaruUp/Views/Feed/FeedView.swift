@@ -5,67 +5,124 @@
 //  Created by 拓実 on 2025/11/17.
 //
 
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct FeedView: View {
   @Bindable var playbackManager: VideoPlaybackManager
-  @State private var posts: [Post] = []
+  @State private var videos: [Video] = []
   @State private var scrollPosition: String?
+  @State private var isLoading = false
+  @State private var errorMessage: String?
 
-  private let videoUrls = [
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
-  ]
+  /// 特定の動画IDから開始する場合に指定
+  let initialVideoId: String?
+
+  private let videoService = VideoService.shared
+
+  init(playbackManager: VideoPlaybackManager, initialVideoId: String? = nil) {
+    self.playbackManager = playbackManager
+    self.initialVideoId = initialVideoId
+  }
 
   var body: some View {
-    ScrollView {
-      LazyVStack(spacing: 0) {
-        ForEach(posts) { post in
-          FeedCell(post: post, player: playbackManager.player)
-            .id(post.id)
-            .onAppear { playInitialVideoIfNecessary() }
+    ZStack {
+      if isLoading && videos.isEmpty {
+        ProgressView("動画を読み込み中...")
+      } else if let errorMessage = errorMessage, videos.isEmpty {
+        VStack {
+          Text("エラー")
+            .font(.headline)
+          Text(errorMessage)
+            .font(.caption)
+            .foregroundColor(.secondary)
+          Button("再試行") {
+            Task {
+              await loadVideos()
+            }
+          }
+          .padding()
+        }
+      } else {
+        ScrollView {
+          LazyVStack(spacing: 0) {
+            ForEach(videos) { video in
+              FeedCell(video: video, player: playbackManager.player)
+                .id(video.id)
+                .onAppear { playInitialVideoIfNecessary() }
+            }
+          }
+          .scrollTargetLayout()
+        }
+        .scrollPosition(id: $scrollPosition)
+        .scrollTargetBehavior(.paging)
+        .ignoresSafeArea()
+        .onChange(of: scrollPosition) { _, newValue in
+          playVideoOnChangeOfScrollPosition(videoId: newValue)
         }
       }
-      .scrollTargetLayout()
     }
-    .onAppear {
-      loadPosts()
-      if let firstPost = posts.first, let url = URL(string: firstPost.videoUrl) {
-        playbackManager.loadVideo(url: url)
+    .task {
+      await loadVideos()
+      // loadVideos完了後にスクロール位置を設定
+      if let initialVideoId = initialVideoId {
+        scrollPosition = initialVideoId
       }
     }
     .onDisappear {
       playbackManager.pauseAndSave()
     }
-    .scrollPosition(id: $scrollPosition)
-    .scrollTargetBehavior(.paging)
-    .ignoresSafeArea()
-    .onChange(of: scrollPosition) { _, newValue in
-      playVideoOnChangeOfScrollPosition(postId: newValue)
-    }
   }
 
-  private func loadPosts() {
-    posts = [
-      .init(id: UUID().uuidString, videoUrl: videoUrls[0]),
-      .init(id: UUID().uuidString, videoUrl: videoUrls[1]),
-      .init(id: UUID().uuidString, videoUrl: videoUrls[0]),
-    ]
+  private func loadVideos() async {
+    isLoading = true
+    errorMessage = nil
+
+    do {
+      var loadedVideos = try await videoService.searchVideos(limit: 10)
+
+      // 初期動画IDが指定されている場合
+      if let initialVideoId = initialVideoId {
+        // 指定された動画を取得
+        let initialVideos = try await videoService.getBulkVideos(videoIds: [initialVideoId])
+
+        if let initialVideo = initialVideos.first {
+          // おすすめ動画リストから同じIDの動画を削除（重複を防ぐ）
+          loadedVideos.removeAll { $0.movieId == initialVideoId }
+
+          // 先頭に初期動画を追加
+          videos = [initialVideo] + loadedVideos
+        } else {
+          // 初期動画が取得できなかった場合は通常のリストを使用
+          videos = loadedVideos
+        }
+      } else {
+        videos = loadedVideos
+      }
+
+      if let firstVideo = videos.first, let url = URL(string: firstVideo.videoUrl) {
+        playbackManager.loadVideo(url: url)
+      }
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+
+    isLoading = false
   }
 
   private func playInitialVideoIfNecessary() {
     guard
       scrollPosition == nil,
-      let post = posts.first
+      let video = videos.first,
+      let url = URL(string: video.videoUrl)
     else { return }
 
-    playbackManager.loadVideo(url: URL(string: post.videoUrl)!)
+    playbackManager.loadVideo(url: url)
   }
 
-  private func playVideoOnChangeOfScrollPosition(postId: String?) {
-    guard let currentPost = posts.first(where: { $0.id == postId }),
-          let url = URL(string: currentPost.videoUrl)
+  private func playVideoOnChangeOfScrollPosition(videoId: String?) {
+    guard let currentVideo = videos.first(where: { $0.id == videoId }),
+      let url = URL(string: currentVideo.videoUrl)
     else { return }
 
     playbackManager.loadVideo(url: url)

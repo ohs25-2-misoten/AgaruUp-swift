@@ -5,12 +5,17 @@
 //  Created by 拓実 on 2025/11/17.
 //
 
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct FeedCell: View {
-  let post: Post
+  let video: Video
   var player: AVPlayer
+
+  @State private var isFavorite = false
+  @State private var isAnimating = false
+
+  private let favoriteService = FavoriteService.shared
 
   var body: some View {
     ZStack {
@@ -19,38 +24,39 @@ struct FeedCell: View {
       VStack {
         Spacer()
         HStack {
-          VStack(alignment: .leading) {
-            Text("") // Title
-            Text("") // 生成日
+          VStack(alignment: .leading, spacing: 4) {
+            Text(video.title)
+              .font(.headline)
+              .lineLimit(2)
+            if let date = video.generatedAt {
+              Text(formatDate(date))
+                .font(.caption)
+            }
           }
           .foregroundStyle(.white)
-          .font(.subheadline)
-          
+
           Spacer()
-          
+
           VStack(spacing: 28) {
             Button {
+              handleFavoriteTap()
             } label: {
               VStack {
-                Image(systemName: "heart.fill")
+                Image(systemName: isFavorite ? "heart.fill" : "heart")
                   .resizable()
                   .frame(width: 20, height: 20)
-                  .foregroundStyle(.white)
-                Text("1.2K") // WebAPIから取得した値にリプレース予定
-                  .font(.caption)
-                  .foregroundStyle(.white)
+                  .foregroundStyle(isFavorite ? .red : .white)
+                  .scaleEffect(isAnimating ? 1.3 : 1.0)
+                  .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isAnimating)
               }
             }
-            
+
             Button {
             } label: {
               VStack {
                 Image(systemName: "ellipsis.bubble.fill")
                   .resizable()
                   .frame(width: 20, height: 20)
-                  .foregroundStyle(.white)
-                Text("345") // WebAPIから取得した値にリプレース予定
-                  .font(.caption)
                   .foregroundStyle(.white)
               }
             }
@@ -70,6 +76,47 @@ struct FeedCell: View {
         player.pause()
       @unknown default:
         break
+      }
+    }
+    .task {
+      await loadFavoriteStatus()
+    }
+  }
+
+  private static let dateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .short
+    formatter.locale = Locale(identifier: "ja_JP")
+    return formatter
+  }()
+
+  private func formatDate(_ date: Date) -> String {
+    Self.dateFormatter.string(from: date)
+  }
+
+  @MainActor
+  private func loadFavoriteStatus() async {
+    do {
+      isFavorite = try favoriteService.isFavorite(movieId: video.movieId)
+    } catch {
+      print("お気に入り状態の読み込みエラー: \(error)")
+    }
+  }
+
+  @MainActor
+  private func handleFavoriteTap() {
+    Task {
+      do {
+        let newState = try favoriteService.toggleFavorite(movieId: video.movieId)
+        isFavorite = newState
+
+        // アニメーション
+        isAnimating = true
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        isAnimating = false
+      } catch {
+        print("お気に入りの切り替えエラー: \(error)")
       }
     }
   }

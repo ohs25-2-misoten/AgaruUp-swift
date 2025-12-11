@@ -5,8 +5,8 @@
 //  Created by 拓実 on 2025/11/17.
 //
 
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct CustomVideoPlayer: UIViewControllerRepresentable {
   var player: AVPlayer
@@ -18,7 +18,7 @@ struct CustomVideoPlayer: UIViewControllerRepresentable {
     controller.exitsFullScreenWhenPlaybackEnds = true
     controller.allowsPictureInPicturePlayback = true
     controller.videoGravity = .resizeAspectFill
-    
+
     return controller
   }
 

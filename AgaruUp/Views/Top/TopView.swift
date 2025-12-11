@@ -9,14 +9,14 @@ import SwiftUI
 
 struct TopView: View {
   @Binding var isLoggedIn: Bool
-    var body: some View {
-      VStack {
-        Button("Sign In with Apple") {
-          self.isLoggedIn = true
-        }
+  var body: some View {
+    VStack {
+      Button("Sign In with Apple") {
+        self.isLoggedIn = true
       }
-      .navigationBarBackButtonHidden(true)
     }
+    .navigationBarBackButtonHidden(true)
+  }
 }
 
 #Preview {
