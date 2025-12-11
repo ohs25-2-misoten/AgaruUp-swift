@@ -63,24 +63,24 @@ AgaruUp/
 
 ## 🔄 開発ワークフロー
 
-このプロジェクトでは、GitFlowベースのブランチ戦略を採用しています。
+このプロジェクトでは、トランクベース開発とXcode Cloud CI/CDを採用しています。
 
 ### ブランチ規則
 
-- `main`: 本番環境用の安定したコード
-- `dev`: 開発の中心となるブランチ
-- `feat/*`: 新機能開発用ブランチ
-- `release/*`: リリース準備用ブランチ
+- `main`: 本番環境用の安定したコード（すべての開発の中心）
+- `feat/*`: 新機能開発用ブランチ（短命）
+- `fix/*`: バグ修正用ブランチ
+- `release/bump-version-*`: バージョンアップ用ブランチ
 - `hotfix/*`: 緊急修正用ブランチ
 
 詳細は [BRANCHING_RULES.md](./AgaruUp/BRANCHING_RULES.md) を参照してください。
 
 ### 新機能開発の流れ
 
-1. devブランチから機能ブランチを作成：
+1. mainブランチから機能ブランチを作成：
 ```bash
-git checkout dev
-git pull origin dev
+git checkout main
+git pull origin main
 git checkout -b feat/your-feature-name
 ```
 
@@ -88,9 +88,12 @@ git checkout -b feat/your-feature-name
 ```bash
 git add .
 git commit -m "feat: 新機能の説明"
+git push origin feat/your-feature-name
 ```
 
-3. プルリクエストを作成してdevにマージ
+3. プルリクエストを作成してmainにマージ
+   - Xcode Cloudが自動ビルド
+   - TestFlightに内部テスト用としてアップロード
 
 ## 🧪 テスト
 
@@ -163,13 +166,54 @@ Conventional Commits形式を採用：
 
 Semantic Versioning (SemVer) を採用：
 - `MAJOR.MINOR.PATCH` (例: 1.0.0)
+- **MARKETING_VERSION**: ユーザー向けバージョン（手動管理）
+- **CURRENT_PROJECT_VERSION**: ビルド番号（Xcode Cloud自動管理）
 
-### リリースプロセス
+### 自動リリースプロセス
 
-1. devからreleaseブランチを作成
-2. バージョン更新とリリース準備
-3. mainにマージしてタグ付け
-4. App Store Connectにアップロード
+#### 1. バージョンアップPRの作成
+
+```bash
+# mainからリリース用ブランチを作成
+git checkout main
+git pull origin main
+git checkout -b release/bump-version-1.1.0
+
+# バージョン番号を更新（GUIまたはCLI）
+# 方法1: Xcode GUI
+open AgaruUp.xcodeproj
+# Target > General > Identity > Version を変更
+
+# 方法2: コマンドライン
+xcrun agvtool new-marketing-version 1.1.0
+
+# コミット&プッシュ
+git add AgaruUp.xcodeproj/project.pbxproj
+git commit -m "chore: バージョンを1.1.0に更新"
+git push origin release/bump-version-1.1.0
+```
+
+#### 2. PRを作成してマージ
+
+- GitHub上でPRを作成
+- GitHub Actionsが自動で `version: 1.1.0` と `release` ラベルを付与
+- レビュー承認後、mainにマージ
+
+#### 3. 自動リリース実行
+
+mainへのマージ後、以下が自動実行されます：
+
+1. **Git Tag作成**: `v1.1.0` タグが自動作成
+2. **GitHub Release作成**: リリースノート付きで自動作成
+3. **Xcode Cloud**: 自動ビルド → App Store Connectにアップロード
+
+### バージョンアップのタイミング
+
+| 変更内容 | バージョン | 例 |
+|---------|-----------|-----|
+| 破壊的変更・大規模アップデート | MAJOR | `1.5.0` → `2.0.0` |
+| 新機能追加 | MINOR | `1.0.0` → `1.1.0` |
+| バグ修正のみ | PATCH | `1.0.0` → `1.0.1` |
 
 ## 🤝 コントリビューション
 
@@ -181,11 +225,18 @@ Semantic Versioning (SemVer) を採用：
 
 ### プルリクエストガイドライン
 
-- [ ] 適切なブランチから作成
+- [ ] 適切なブランチ（`main`）から作成
 - [ ] テストの追加・更新
 - [ ] コードレビューの実施
 - [ ] コンフリクトの解決
 - [ ] ドキュメントの更新（必要な場合）
+
+### リリースPRの場合
+
+- [ ] ブランチ名が `release/bump-version-X.X.X` 形式
+- [ ] `project.pbxproj` のバージョンが更新されている
+- [ ] GitHub Actionsによるラベル付けを確認
+- [ ] マージ後の自動リリースを確認
 
 ## 📄 ライセンス
 
@@ -210,4 +261,4 @@ GNU Affero General Public License v3.0 (AGPL-3.0) ライセンスの下で提供
 
 ---
 
-**最終更新**: 2025年10月30日
+**最終更新**: 2025年12月11日
