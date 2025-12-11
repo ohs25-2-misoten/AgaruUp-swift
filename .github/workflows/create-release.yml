@@ -98,28 +98,28 @@ jobs:
           if [ "${{ steps.find_pr.outputs.pr_found }}" = "true" ]; then
             NOTES="$NOTES
 
-### 📋 Release PR
-${{ steps.find_pr.outputs.pr_title }}
-
-${{ steps.find_pr.outputs.pr_body }}
-
-**PR**: ${{ steps.find_pr.outputs.pr_url }}"
-          fi
+          ### 📋 Release PR
+          ${{ steps.find_pr.outputs.pr_title }}
           
-          # 変更履歴を追加
-          NOTES="$NOTES
-
-### 📝 Changes
-${{ steps.changelog.outputs.changelog }}
-
----
-**Full Changelog**: https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo 'initial')...$TAG"
+          ${{ steps.find_pr.outputs.pr_body }}
           
-          cat >> $GITHUB_OUTPUT <<EOF
-notes<<NOTES_EOF
-$NOTES
-NOTES_EOF
-EOF
+          **PR**: ${{ steps.find_pr.outputs.pr_url }}"
+                    fi
+                    
+                    # 変更履歴を追加
+                    NOTES="$NOTES
+          
+          ### 📝 Changes
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ---
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo 'initial')...$TAG"
+                    
+                    cat >> $GITHUB_OUTPUT <<EOF
+          notes<<NOTES_EOF
+          $NOTES
+          NOTES_EOF
+          EOF
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
