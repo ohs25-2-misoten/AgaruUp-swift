@@ -119,10 +119,34 @@ jobs:
         with:
           script: |
             const version = '${{ steps.extract_version.outputs.version }}';
+            const commentBody = `🎯 **Version Verification Complete**\n\n✅ Version \`${version}\` has been verified in the project file.\n\nThis PR is labeled for release and will trigger automatic tag creation and GitHub Release when merged to \`main\`.`;
             
-            await github.rest.issues.createComment({
+            // 既存のコメントを検索
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: `🎯 **Version Verification Complete**\n\n✅ Version \`${version}\` has been verified in the project file.\n\nThis PR is labeled for release and will trigger automatic tag creation and GitHub Release when merged to \`main\`.`
+              issue_number: context.issue.number
             });
+            
+            const botComment = comments.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
+              comment.body.includes('Version Verification Complete')
+            );
+            
+            if (botComment) {
+              // 既存のコメントを更新
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              // 新しいコメントを作成
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
