@@ -83,9 +83,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           git tag -a "v$VERSION" -m "Release version $VERSION
-
-Released from PR #${{ steps.get_pr.outputs.pr_number }}
-${{ steps.get_pr.outputs.pr_title }}"
+          
+          Released from PR #${{ steps.get_pr.outputs.pr_number }}
+          ${{ steps.get_pr.outputs.pr_title }}"
           
           git push origin "v$VERSION"
           
