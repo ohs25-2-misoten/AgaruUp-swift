@@ -9,20 +9,18 @@ import AVKit
 import SwiftUI
 
 struct CustomVideoPlayer: UIViewControllerRepresentable {
-  var player: AVPlayer
+    var player: AVPlayer
 
-  func makeUIViewController(context: Context) -> UIViewController {
-    let controller = AVPlayerViewController()
-    controller.player = player
-    controller.showsPlaybackControls = false
-    controller.exitsFullScreenWhenPlaybackEnds = true
-    controller.allowsPictureInPicturePlayback = true
-    controller.videoGravity = .resizeAspectFill
+    func makeUIViewController(context _: Context) -> UIViewController {
+        let controller = AVPlayerViewController()
+        controller.player = player
+        controller.showsPlaybackControls = false
+        controller.exitsFullScreenWhenPlaybackEnds = true
+        controller.allowsPictureInPicturePlayback = true
+        controller.videoGravity = .resizeAspectFill
 
-    return controller
-  }
+        return controller
+    }
 
-  func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-
-  }
+    func updateUIViewController(_: UIViewController, context _: Context) {}
 }
