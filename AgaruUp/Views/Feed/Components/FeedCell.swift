@@ -9,115 +9,162 @@ import AVKit
 import SwiftUI
 
 struct FeedCell: View {
-  let video: Video
-  var player: AVPlayer
+    let video: Video
+    var player: AVPlayer
 
-  @State private var isFavorite = false
-  @State private var isAnimating = false
+    @State private var isFavorite = false
+    @State private var isAnimating = false
+    @State private var heartPressed = false
+    @State private var commentPressed = false
 
-  private let favoriteService = FavoriteService.shared
+    private let favoriteService = FavoriteService.shared
 
-  var body: some View {
-    ZStack {
-      CustomVideoPlayer(player: player)
-        .containerRelativeFrame([.horizontal, .vertical])
-      VStack {
-        Spacer()
-        HStack {
-          VStack(alignment: .leading, spacing: 4) {
-            Text(video.title)
-              .font(.headline)
-              .lineLimit(2)
-            if let date = video.generatedAt {
-              Text(formatDate(date))
-                .font(.caption)
+    var body: some View {
+        ZStack {
+            CustomVideoPlayer(player: player)
+                .containerRelativeFrame([.horizontal, .vertical])
+            VStack {
+                Spacer()
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(video.title)
+                            .font(.headline)
+                            .lineLimit(2)
+                        if let date = video.generatedAt {
+                            Text(formatDate(date))
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundStyle(.white)
+
+                    Spacer()
+
+                    VStack(spacing: 28) {
+                        Button {
+                            handleFavoriteTap()
+                        } label: {
+                            Image(systemName: isFavorite ? "heart.fill" : "heart")
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundStyle(isFavorite ? .red : .white)
+                                .scaleEffect(isAnimating ? 1.3 : 1.0)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isAnimating)
+                        }
+                        .frame(minWidth: 44, minHeight: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(heartPressed ? 0.3 : 0.0))
+                        )
+                        .contentShape(Circle())
+                        .pressEvents(
+                            onPress: { heartPressed = true },
+                            onRelease: { heartPressed = false }
+                        )
+
+                        Button {} label: {
+                            Image(systemName: "ellipsis.bubble.fill")
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundStyle(.white)
+                        }
+                        .frame(minWidth: 44, minHeight: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(commentPressed ? 0.3 : 0.0))
+                        )
+                        .contentShape(Circle())
+                        .pressEvents(
+                            onPress: { commentPressed = true },
+                            onRelease: { commentPressed = false }
+                        )
+                    }
+                }
+                .padding(.bottom, 80)
             }
-          }
-          .foregroundStyle(.white)
-
-          Spacer()
-
-          VStack(spacing: 28) {
-            Button {
-              handleFavoriteTap()
-            } label: {
-              VStack {
-                Image(systemName: isFavorite ? "heart.fill" : "heart")
-                  .resizable()
-                  .frame(width: 20, height: 20)
-                  .foregroundStyle(isFavorite ? .red : .white)
-                  .scaleEffect(isAnimating ? 1.3 : 1.0)
-                  .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isAnimating)
-              }
-            }
-
-            Button {
-            } label: {
-              VStack {
-                Image(systemName: "ellipsis.bubble.fill")
-                  .resizable()
-                  .frame(width: 20, height: 20)
-                  .foregroundStyle(.white)
-              }
-            }
-          }
+            .padding()
         }
-        .padding(.bottom, 80)
-      }
-      .padding()
+        .onTapGesture {
+            switch player.timeControlStatus {
+            case .paused:
+                player.play()
+            case .waitingToPlayAtSpecifiedRate:
+                break
+            case .playing:
+                player.pause()
+            @unknown default:
+                break
+            }
+        }
+        .task {
+            await loadFavoriteStatus()
+        }
     }
-    .onTapGesture {
-      switch player.timeControlStatus {
-      case .paused:
-        player.play()
-      case .waitingToPlayAtSpecifiedRate:
-        break
-      case .playing:
-        player.pause()
-      @unknown default:
-        break
-      }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter
+    }()
+
+    private func formatDate(_ date: Date) -> String {
+        Self.dateFormatter.string(from: date)
     }
-    .task {
-      await loadFavoriteStatus()
+
+    @MainActor
+    private func loadFavoriteStatus() async {
+        do {
+            isFavorite = try favoriteService.isFavorite(movieId: video.movieId)
+        } catch {
+            print("お気に入り状態の読み込みエラー: \(error)")
+        }
     }
-  }
 
-  private static let dateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    formatter.timeStyle = .short
-    formatter.locale = Locale(identifier: "ja_JP")
-    return formatter
-  }()
+    @MainActor
+    private func handleFavoriteTap() {
+        Task {
+            do {
+                let newState = try favoriteService.toggleFavorite(movieId: video.movieId)
+                isFavorite = newState
 
-  private func formatDate(_ date: Date) -> String {
-    Self.dateFormatter.string(from: date)
-  }
-
-  @MainActor
-  private func loadFavoriteStatus() async {
-    do {
-      isFavorite = try favoriteService.isFavorite(movieId: video.movieId)
-    } catch {
-      print("お気に入り状態の読み込みエラー: \(error)")
+                // アニメーション
+                isAnimating = true
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                isAnimating = false
+            } catch {
+                print("お気に入りの切り替えエラー: \(error)")
+            }
+        }
     }
-  }
+}
 
-  @MainActor
-  private func handleFavoriteTap() {
-    Task {
-      do {
-        let newState = try favoriteService.toggleFavorite(movieId: video.movieId)
-        isFavorite = newState
+// MARK: - View Extension for Press Events
 
-        // アニメーション
-        isAnimating = true
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        isAnimating = false
-      } catch {
-        print("お気に入りの切り替えエラー: \(error)")
-      }
+extension View {
+    /// ボタンの押下状態を検知するModifier
+    /// - Parameters:
+    ///   - onPress: ボタン押下時のコールバック
+    ///   - onRelease: ボタン解放時のコールバック
+    func pressEvents(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) -> some View {
+        modifier(PressModifier(onPress: onPress, onRelease: onRelease))
     }
-  }
+}
+
+private struct PressModifier: ViewModifier {
+    let onPress: () -> Void
+    let onRelease: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        onPress()
+                    }
+                    .onEnded { _ in
+                        onRelease()
+                    }
+            )
+    }
 }
