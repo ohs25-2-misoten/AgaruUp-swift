@@ -10,29 +10,29 @@ import SwiftUI
 
 @main
 struct AgaruUpApp: App {
-  var sharedModelContainer: ModelContainer = {
-    let schema = Schema([
-      Item.self,
-      FavoriteVideo.self,
-    ])
-    let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    var sharedModelContainer: ModelContainer = {
+        let schema = Schema([
+            Item.self,
+            FavoriteVideo.self,
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
-    do {
-      let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
-      // FavoriteServiceにModelContainerを設定
-      Task { @MainActor in
-        FavoriteService.shared.configure(with: container)
-      }
-      return container
-    } catch {
-      fatalError("Could not create ModelContainer: \(error)")
-    }
-  }()
+        do {
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            // FavoriteServiceにModelContainerを設定
+            Task { @MainActor in
+                FavoriteService.shared.configure(with: container)
+            }
+            return container
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    }()
 
-  var body: some Scene {
-    WindowGroup {
-      ContentView()
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+        .modelContainer(sharedModelContainer)
     }
-    .modelContainer(sharedModelContainer)
-  }
 }

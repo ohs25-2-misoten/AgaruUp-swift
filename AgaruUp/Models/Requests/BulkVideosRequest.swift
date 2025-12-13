@@ -9,6 +9,6 @@ import Foundation
 
 /// 動画UUID指定検索リクエスト
 struct BulkVideosRequest: Codable, Sendable {
-  /// 動画のUUIDリスト
-  let videos: [String]
+    /// 動画のUUIDリスト
+    let videos: [String]
 }

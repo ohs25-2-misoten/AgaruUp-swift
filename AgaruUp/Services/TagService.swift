@@ -9,17 +9,17 @@ import Foundation
 
 /// タグ関連のAPIサービス
 final class TagService: Sendable {
-  static let shared = TagService()
+    static let shared = TagService()
 
-  private let apiClient = APIClient.shared
+    private let apiClient = APIClient.shared
 
-  private init() {}
+    private init() {}
 
-  // MARK: - タグリスト取得
+    // MARK: - タグリスト取得
 
-  /// 利用可能なタグ一覧を取得する
-  /// - Returns: タグ名の配列
-  nonisolated func getTags() async throws -> [String] {
-    return try await apiClient.get("/tags")
-  }
+    /// 利用可能なタグ一覧を取得する
+    /// - Returns: タグ名の配列
+    nonisolated func getTags() async throws -> [String] {
+        try await apiClient.get("/tags")
+    }
 }

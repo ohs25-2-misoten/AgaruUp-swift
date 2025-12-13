@@ -7,20 +7,20 @@
 import SwiftUI
 
 struct SplashView: View {
-  @State private var move = false
+    @State private var move = false
 
-  var body: some View {
-    ZStack {
-      Color("background")
-        .ignoresSafeArea()
-      Image("logo")
-        .resizable()
-        .scaledToFit()
-        .frame(width: 200, height: 200)
+    var body: some View {
+        ZStack {
+            Color("background")
+                .ignoresSafeArea()
+            Image("logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 200, height: 200)
+        }
     }
-  }
 }
 
 #Preview {
-  SplashView()
+    SplashView()
 }
