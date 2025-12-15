@@ -77,8 +77,7 @@ final class APIClient: Sendable {
 
     /// クエリパラメータ付きGETリクエスト
     nonisolated func get<T: Decodable>(_ endpoint: String, queryItems: [URLQueryItem]) async throws
-        -> T
-    {
+        -> T {
         var components = URLComponents(string: baseURL + endpoint)
 
         // 空でないクエリアイテムのみ追加

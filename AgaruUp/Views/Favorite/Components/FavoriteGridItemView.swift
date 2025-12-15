@@ -29,7 +29,7 @@ struct FavoriteGridItemView: View {
                     .fontWeight(.bold)
                     .lineLimit(1)
                     .foregroundStyle(.primary)
-                
+
                 if let date = video.generatedAt {
                     Text(date, style: .date)
                         .font(.caption)

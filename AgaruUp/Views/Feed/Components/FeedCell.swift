@@ -26,7 +26,7 @@ struct FeedCell: View {
         ZStack {
             CustomVideoPlayer(player: player)
                 .containerRelativeFrame([.horizontal, .vertical])
-            
+
             // 一時停止/再生マークの表示
             ZStack {
                 if isPaused {
@@ -35,7 +35,7 @@ struct FeedCell: View {
                         .foregroundColor(.white.opacity(0.7))
                         .transition(.scale.combined(with: .opacity))
                 }
-                
+
                 if showPlayIcon {
                     Image(systemName: "play.fill")
                         .font(.system(size: 80))
@@ -45,20 +45,20 @@ struct FeedCell: View {
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPaused)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showPlayIcon)
-            
+
             // ローディングスピナー
             if isLoadingVideo {
                 ZStack {
                     Circle()
                         .fill(Color.black.opacity(0.5))
                         .frame(width: 80, height: 80)
-                    
+
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(1.5)
                 }
             }
-            
+
             VStack {
                 Spacer()
                 HStack {
@@ -147,11 +147,11 @@ struct FeedCell: View {
             // Observer cleanup is handled automatically by onReceive
         }
     }
-    
+
     /// AVPlayerの状態を監視してローディング状態を更新
     private func observePlayerStatus() {
         // timeControlStatusの変更を監視
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             if player.timeControlStatus == .waitingToPlayAtSpecifiedRate {
                 isLoadingVideo = true
             } else {
