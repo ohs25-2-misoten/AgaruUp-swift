@@ -16,6 +16,9 @@ struct FeedCell: View {
     @State private var isAnimating = false
     @State private var heartPressed = false
     @State private var commentPressed = false
+    @State private var showPlayIcon = false
+    @State private var isPaused = false
+    @State private var isLoadingVideo = false
 
     private let favoriteService = FavoriteService.shared
 
@@ -23,6 +26,39 @@ struct FeedCell: View {
         ZStack {
             CustomVideoPlayer(player: player)
                 .containerRelativeFrame([.horizontal, .vertical])
+            
+            // 一時停止/再生マークの表示
+            ZStack {
+                if isPaused {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.white.opacity(0.7))
+                        .transition(.scale.combined(with: .opacity))
+                }
+                
+                if showPlayIcon {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.white.opacity(0.7))
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPaused)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showPlayIcon)
+            
+            // ローディングスピナー
+            if isLoadingVideo {
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.5))
+                        .frame(width: 80, height: 80)
+                    
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.5)
+                }
+            }
+            
             VStack {
                 Spacer()
                 HStack {
@@ -65,7 +101,7 @@ struct FeedCell: View {
                             Image(systemName: "ellipsis.bubble.fill")
                                 .resizable()
                                 .frame(width: 20, height: 20)
-                                .foregroundStyle(.white)
+										  .foregroundStyle(.gray)
                         }
                         .frame(minWidth: 44, minHeight: 44)
                         .background(
@@ -77,6 +113,7 @@ struct FeedCell: View {
                             onPress: { commentPressed = true },
                             onRelease: { commentPressed = false }
                         )
+								.disabled(true)
                     }
                 }
                 .padding(.bottom, 80)
@@ -87,16 +124,39 @@ struct FeedCell: View {
             switch player.timeControlStatus {
             case .paused:
                 player.play()
+                isPaused = false
+                showPlayIcon = true
+                Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    showPlayIcon = false
+                }
             case .waitingToPlayAtSpecifiedRate:
                 break
             case .playing:
                 player.pause()
+                isPaused = true
             @unknown default:
                 break
             }
         }
         .task {
             await loadFavoriteStatus()
+            observePlayerStatus()
+        }
+        .onDisappear {
+            // Observer cleanup is handled automatically by onReceive
+        }
+    }
+    
+    /// AVPlayerの状態を監視してローディング状態を更新
+    private func observePlayerStatus() {
+        // timeControlStatusの変更を監視
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+            if player.timeControlStatus == .waitingToPlayAtSpecifiedRate {
+                isLoadingVideo = true
+            } else {
+                isLoadingVideo = false
+            }
         }
     }
 
