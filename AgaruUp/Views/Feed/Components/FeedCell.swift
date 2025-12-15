@@ -20,6 +20,7 @@ struct FeedCell: View {
     @State private var showPlayIcon = false
     @State private var isPaused = false
     @State private var isLoadingVideo = false
+    @State private var playIconTask: Task<Void, Never>?
 
     /// プレイヤー状態監視用のタイマー (Combineベース)
     private let playerStatusTimer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -130,9 +131,14 @@ struct FeedCell: View {
                 player.play()
                 isPaused = false
                 showPlayIcon = true
-                Task {
+                // 既存のTaskをキャンセルして新しいTaskを開始
+                playIconTask?.cancel()
+                playIconTask = Task {
                     try? await Task.sleep(nanoseconds: 500_000_000)
-                    showPlayIcon = false
+                    // キャンセルされていなければ更新
+                    if !Task.isCancelled {
+                        showPlayIcon = false
+                    }
                 }
             case .waitingToPlayAtSpecifiedRate:
                 break
@@ -149,6 +155,11 @@ struct FeedCell: View {
         .onReceive(playerStatusTimer) { _ in
             // ビューが消えると自動的に購読がキャンセルされるのでメモリリークを防止
             isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+        }
+        .onDisappear {
+            // ビュー破棄時にTaskをキャンセル
+            playIconTask?.cancel()
+            playIconTask = nil
         }
     }
 
