@@ -6,6 +6,7 @@
 //
 
 import AVKit
+import Combine
 import SwiftUI
 
 struct FeedCell: View {
@@ -19,6 +20,9 @@ struct FeedCell: View {
     @State private var showPlayIcon = false
     @State private var isPaused = false
     @State private var isLoadingVideo = false
+
+    /// プレイヤー状態監視用のタイマー (Combineベース)
+    private let playerStatusTimer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
 
     private let favoriteService = FavoriteService.shared
 
@@ -141,22 +145,10 @@ struct FeedCell: View {
         }
         .task {
             await loadFavoriteStatus()
-            observePlayerStatus()
         }
-        .onDisappear {
-            // Observer cleanup is handled automatically by onReceive
-        }
-    }
-
-    /// AVPlayerの状態を監視してローディング状態を更新
-    private func observePlayerStatus() {
-        // timeControlStatusの変更を監視
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            if player.timeControlStatus == .waitingToPlayAtSpecifiedRate {
-                isLoadingVideo = true
-            } else {
-                isLoadingVideo = false
-            }
+        .onReceive(playerStatusTimer) { _ in
+            // ビューが消えると自動的に購読がキャンセルされるのでメモリリークを防止
+            isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
         }
     }
 
