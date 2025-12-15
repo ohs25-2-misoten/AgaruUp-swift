@@ -15,19 +15,11 @@ struct FavoriteGridItemView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             GeometryReader { geometry in
-                if let url = URL(string: video.videoUrl) {
-                    VideoThumbnailView(videoURL: video.videoUrl)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .clipped()
-                        .background(Color.gray.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                } else {
-                     Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay(Text("No Video").font(.caption))
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
+                VideoThumbnailView(videoURL: video.videoUrl)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+                    .background(Color.gray.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .aspectRatio(9 / 16, contentMode: .fit)
 
