@@ -154,7 +154,8 @@ struct FeedCell: View {
             await loadFavoriteStatus()
         }
         .onAppear {
-            // タイマーを開始してCancellableを保存
+            // 既存の購読をキャンセルしてから新しいタイマーを開始
+            timerCancellable?.cancel()
             timerCancellable = playerStatusTimer.autoconnect().sink { _ in
                 isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
             }
