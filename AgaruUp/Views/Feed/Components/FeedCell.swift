@@ -21,9 +21,7 @@ struct FeedCell: View {
     @State private var isPaused = false
     @State private var isLoadingVideo = false
     @State private var playIconTask: Task<Void, Never>?
-
-    /// プレイヤー状態監視用のタイマー (Combineベース)
-    private let playerStatusTimer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
+    @State private var timerCancellable: AnyCancellable?
 
     private let favoriteService = FavoriteService.shared
 
@@ -152,14 +150,24 @@ struct FeedCell: View {
         .task {
             await loadFavoriteStatus()
         }
-        .onReceive(playerStatusTimer) { _ in
-            // ビューが消えると自動的に購読がキャンセルされるのでメモリリークを防止
-            isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+        .onAppear {
+            // タイマーが未起動の場合のみ購読を開始
+            if timerCancellable == nil {
+                timerCancellable = Timer.publish(every: 0.1, on: .main, in: .common)
+                    .autoconnect()
+                    .sink { _ in
+                        isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+                    }
+            }
         }
         .onDisappear {
             // ビュー破棄時にTaskをキャンセル
             playIconTask?.cancel()
             playIconTask = nil
+            
+            // タイマーの購読をキャンセル
+            timerCancellable?.cancel()
+            timerCancellable = nil
         }
     }
 
