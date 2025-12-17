@@ -137,7 +137,7 @@ struct FeedCell: View {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                     // キャンセルされていなければ更新
                     if !Task.isCancelled {
-                        showPlayIcon = false
+                        await MainActor.run { showPlayIcon = false }
                     }
                 }
             case .waitingToPlayAtSpecifiedRate:
