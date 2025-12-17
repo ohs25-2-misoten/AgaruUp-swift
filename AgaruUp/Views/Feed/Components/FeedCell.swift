@@ -17,10 +17,23 @@ struct FeedCell: View {
     @State private var isAnimating = false
     @State private var heartPressed = false
     @State private var commentPressed = false
+    
+    /// 再生アイコンの表示状態（タップして再生したときに短時間表示される）
     @State private var showPlayIcon = false
+    
+    /// 動画の一時停止状態（一時停止中は一時停止アイコンが表示される）
     @State private var isPaused = false
+    
+    /// 動画のローディング状態（バッファリング中にスピナーを表示）
     @State private var isLoadingVideo = false
+    
+    /// 再生アイコンを自動で非表示にするための非同期タスク
+    /// タップ時に新しいタスクを開始し、前のタスクはキャンセルされる
+    /// ビュー破棄時に適切にキャンセルしてリソースリークを防止
     @State private var playIconTask: Task<Void, Never>?
+    
+    /// プレイヤーのローディング状態を監視するタイマーの購読
+    /// onAppearで開始し、onDisappearでキャンセルしてリソースリークを防止
     @State private var timerCancellable: AnyCancellable?
 
     private let favoriteService = FavoriteService.shared
