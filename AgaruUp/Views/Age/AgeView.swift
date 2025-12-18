@@ -9,19 +9,18 @@ import SwiftUI
 
 struct AgeView: View {
     @State private var isShowingSearch = false
+    private let notificationSendModel = NotificationSendModel()
 
     var body: some View {
         NavigationStack {
             VStack {
-                ProgressIndicator()
+                ProgressIndicator {
+                    notificationSendModel.sendCompletedNotification()
+                }
             }
             .sheet(isPresented: $isShowingSearch) {
                 SearchView()
             }
         }
     }
-}
-
-#Preview {
-    AgeView()
 }
