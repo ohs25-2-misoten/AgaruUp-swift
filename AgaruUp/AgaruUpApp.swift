@@ -10,6 +10,8 @@ import SwiftUI
 
 @main
 struct AgaruUpApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self)
+    private var appDelegate
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,

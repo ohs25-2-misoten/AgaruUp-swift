@@ -9,11 +9,13 @@ import SwiftUI
 
 struct ProgressIndicator: View {
     @State private var progress: Double = 0.0
+    @State private var hasCompleted = false
 
     private let stepAmount: Double = 0.1
     private let backgroundColor = Color.gray.opacity(0.3)
     private let indicatorColor = Color.orange
-    var action: () -> Void = {}
+
+    let onCompleted: () -> Void
 
     var body: some View {
         VStack(spacing: 25) {
@@ -24,23 +26,27 @@ struct ProgressIndicator: View {
 
                 RoundedRectangle(cornerRadius: 15)
                     .fill(indicatorColor)
-                    .frame(width: max(0, min(CGFloat(progress) * 300, 300)), height: 30)
-                    .shadow(color: indicatorColor.opacity(0.5), radius: 5, x: 0, y: 3)
+                    .frame(
+                        width: max(0, min(CGFloat(progress) * 300, 300)),
+                        height: 30
+                    )
 
                 Text("\(Int(progress * 100))%")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(progress > 0.4 ? .white : .black.opacity(0.7))
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: 300)
             .animation(.easeInOut(duration: 0.5), value: progress)
 
-            Button(action: {
+            Button("アガる") {
                 progress = min(1.0, progress + stepAmount)
-            }) {
-                Text("アガる")
-                    .frame(maxWidth: .infinity)
+
+                if progress >= 1.0 && !hasCompleted {
+                    hasCompleted = true
+                    onCompleted()
+                }
             }
             .frame(maxWidth: 300)
             .buttonStyle(.glassProminent)
@@ -48,8 +54,4 @@ struct ProgressIndicator: View {
         }
         .padding()
     }
-}
-
-#Preview {
-    ProgressIndicator()
 }
