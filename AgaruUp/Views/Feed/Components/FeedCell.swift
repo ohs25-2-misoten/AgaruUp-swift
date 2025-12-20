@@ -6,6 +6,7 @@
 //
 
 import AVKit
+import Combine
 import SwiftUI
 
 struct FeedCell: View {
@@ -16,6 +17,24 @@ struct FeedCell: View {
     @State private var isAnimating = false
     @State private var heartPressed = false
     @State private var commentPressed = false
+    
+    /// 再生アイコンの表示状態（タップして再生したときに短時間表示される）
+    @State private var showPlayIcon = false
+    
+    /// 動画の一時停止状態（一時停止中は一時停止アイコンが表示される）
+    @State private var isPaused = false
+    
+    /// 動画のローディング状態（バッファリング中にスピナーを表示）
+    @State private var isLoadingVideo = false
+    
+    /// 再生アイコンを自動で非表示にするための非同期タスク
+    /// タップ時に新しいタスクを開始し、前のタスクはキャンセルされる
+    /// ビュー破棄時に適切にキャンセルしてリソースリークを防止
+    @State private var playIconTask: Task<Void, Never>?
+    
+    /// プレイヤーのローディング状態を監視するタイマーの購読
+    /// onAppearで開始し、onDisappearでキャンセルしてリソースリークを防止
+    @State private var timerCancellable: AnyCancellable?
 
     private let favoriteService = FavoriteService.shared
 
@@ -23,6 +42,39 @@ struct FeedCell: View {
         ZStack {
             CustomVideoPlayer(player: player)
                 .containerRelativeFrame([.horizontal, .vertical])
+
+            // 一時停止/再生マークの表示
+            ZStack {
+                if isPaused {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.white.opacity(0.7))
+                        .transition(.scale.combined(with: .opacity))
+                }
+
+                if showPlayIcon {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.white.opacity(0.7))
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPaused)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showPlayIcon)
+
+            // ローディングスピナー
+            if isLoadingVideo {
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.5))
+                        .frame(width: 80, height: 80)
+
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.5)
+                }
+            }
+
             VStack {
                 Spacer()
                 HStack {
@@ -65,7 +117,7 @@ struct FeedCell: View {
                             Image(systemName: "ellipsis.bubble.fill")
                                 .resizable()
                                 .frame(width: 20, height: 20)
-                                .foregroundStyle(.white)
+										  .foregroundStyle(.gray)
                         }
                         .frame(minWidth: 44, minHeight: 44)
                         .background(
@@ -77,6 +129,7 @@ struct FeedCell: View {
                             onPress: { commentPressed = true },
                             onRelease: { commentPressed = false }
                         )
+								.disabled(true)
                     }
                 }
                 .padding(.bottom, 80)
@@ -87,16 +140,47 @@ struct FeedCell: View {
             switch player.timeControlStatus {
             case .paused:
                 player.play()
+                isPaused = false
+                showPlayIcon = true
+                // 既存のTaskをキャンセルして新しいTaskを開始
+                playIconTask?.cancel()
+                playIconTask = Task {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    // キャンセルされていなければ更新
+                    if !Task.isCancelled {
+                        await MainActor.run { showPlayIcon = false }
+                    }
+                }
             case .waitingToPlayAtSpecifiedRate:
                 break
             case .playing:
                 player.pause()
+                isPaused = true
             @unknown default:
                 break
             }
         }
         .task {
             await loadFavoriteStatus()
+        }
+        .onAppear {
+            // タイマーが未起動の場合のみ購読を開始
+            if timerCancellable == nil {
+                timerCancellable = Timer.publish(every: 0.1, on: .main, in: .common)
+                    .autoconnect()
+                    .sink { _ in
+                        isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+                    }
+            }
+        }
+        .onDisappear {
+            // ビュー破棄時にTaskをキャンセル
+            playIconTask?.cancel()
+            playIconTask = nil
+            
+            // タイマーの購読をキャンセル
+            timerCancellable?.cancel()
+            timerCancellable = nil
         }
     }
 

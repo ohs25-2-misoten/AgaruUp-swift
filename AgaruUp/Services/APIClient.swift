@@ -77,8 +77,7 @@ final class APIClient: Sendable {
 
     /// クエリパラメータ付きGETリクエスト
     nonisolated func get<T: Decodable>(_ endpoint: String, queryItems: [URLQueryItem]) async throws
-        -> T
-    {
+        -> T {
         var components = URLComponents(string: baseURL + endpoint)
 
         // 空でないクエリアイテムのみ追加
@@ -130,6 +129,14 @@ final class APIClient: Sendable {
 
         do {
             let (data, response) = try await session.data(for: request)
+            
+            // デバッグ用: 生のレスポンスをログ出力
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("===== Raw API Response =====")
+                print("Endpoint: \(endpoint)")
+                print("Response: \(jsonString)")
+                print("============================")
+            }
 
             guard let httpResponse = response as? HTTPURLResponse,
                   (200 ... 299).contains(httpResponse.statusCode)
@@ -142,6 +149,9 @@ final class APIClient: Sendable {
         } catch let error as APIError {
             throw error
         } catch let error as DecodingError {
+            print("===== Decoding Error Detail =====")
+            print("\(error)")
+            print("=================================")
             throw APIError.decodingError(error)
         } catch {
             throw APIError.networkError(error)

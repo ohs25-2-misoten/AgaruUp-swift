@@ -24,8 +24,7 @@ final class VideoService: Sendable {
     ///   - limit: 取得件数の上限（任意）
     /// - Returns: 動画の配列
     nonisolated func searchVideos(query: String? = nil, tags: String? = nil, limit: Int? = nil)
-        async throws -> [Video]
-    {
+        async throws -> [Video] {
         var queryItems: [URLQueryItem] = []
 
         if let query {

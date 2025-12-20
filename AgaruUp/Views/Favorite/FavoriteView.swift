@@ -15,7 +15,7 @@ struct FavoriteView: View {
 
     private let columns = [
         GridItem(.flexible(), spacing: 15),
-        GridItem(.flexible(), spacing: 15),
+        GridItem(.flexible(), spacing: 15)
     ]
 
     var body: some View {
@@ -141,15 +141,15 @@ private struct FavoriteVideoGridItem: View {
         VStack(alignment: .leading, spacing: 8) {
             // 動画サムネイル
             VideoThumbnailView(videoURL: video.videoUrl)
-                .aspectRatio(9 / 16, contentMode: .fit)
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .aspectRatio(9.0 / 16.0, contentMode: .fit)
                 .overlay(
                     Image(systemName: "play.circle.fill")
                         .font(.system(size: 40))
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.3), radius: 2)
                 )
-                .cornerRadius(12)
-                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(video.title)
