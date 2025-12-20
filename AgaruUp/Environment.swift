@@ -12,8 +12,8 @@ enum Environment: String {
 
     var baseURL: String {
         switch self {
-        case .Debug: "https://api.easy-hacking.com"
-        case .Staging: "https://19977319-b30f-4d03-9b7b-6a9c89b89635.mock.pstmn.io"
+        case .Debug: "https://19977319-b30f-4d03-9b7b-6a9c89b89635.mock.pstmn.io"
+        case .Staging: "https://api.easy-hacking.com"
         case .Release: "https://api.easy-hacking.com"
         }
     }
