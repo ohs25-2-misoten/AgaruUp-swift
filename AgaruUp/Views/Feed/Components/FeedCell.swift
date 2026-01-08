@@ -104,7 +104,7 @@ struct FeedCell: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(video.title)
                             .font(.headline)
-                            .lineLimit(showDetails ? nil : 3)
+                            .lineLimit(showDetails ? nil : 2)
                         
                         if showDetails {
                             // タグ表示（タグがある場合のみ）
