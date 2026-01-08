@@ -35,6 +35,9 @@ struct FeedCell: View {
     /// プレイヤーのローディング状態を監視するタイマーの購読
     /// onAppearで開始し、onDisappearでキャンセルしてリソースリークを防止
     @State private var timerCancellable: AnyCancellable?
+    
+    /// ループ再生監視用のCancellable
+    @State private var loopCancellable: AnyCancellable?
 
     private let favoriteService = FavoriteService.shared
 
@@ -172,6 +175,20 @@ struct FeedCell: View {
                         isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
                     }
             }
+            
+            // ループ再生の設定 (Combine)
+            player.actionAtItemEnd = .none
+            
+            if let currentItem = player.currentItem {
+                loopCancellable = NotificationCenter.default.publisher(
+                    for: .AVPlayerItemDidPlayToEndTime,
+                    object: currentItem
+                )
+                .sink { _ in
+                    player.seek(to: .zero)
+                    player.play()
+                }
+            }
         }
         .onDisappear {
             // ビュー破棄時にTaskをキャンセル
@@ -181,6 +198,10 @@ struct FeedCell: View {
             // タイマーの購読をキャンセル
             timerCancellable?.cancel()
             timerCancellable = nil
+            
+            // ループ再生の監視を解除
+            loopCancellable?.cancel()
+            loopCancellable = nil
         }
     }
 
