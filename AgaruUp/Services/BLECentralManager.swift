@@ -38,7 +38,7 @@ final class BLECentralManager: NSObject {
     static let shared = BLECentralManager()
 
     /// ターゲットデバイス名
-    private let targetDeviceName = "rpi-camera"
+    private let targetDeviceName = "agaru-up-camera"
     /// 検出距離の閾値（メートル）
     private let distanceThreshold: Double = 10.0
 
@@ -57,9 +57,11 @@ final class BLECentralManager: NSObject {
     /// スキャン中かどうか
     var isScanning: Bool = false
 
-    /// BLEスキャンが有効かどうか
-    var isEnabled: Bool = false {
+    /// BLEスキャンが有効かどうか（UserDefaultsで永続化）
+    private static let isEnabledKey = "bleIsEnabled"
+    var isEnabled: Bool = UserDefaults.standard.bool(forKey: isEnabledKey) {
         didSet {
+            UserDefaults.standard.set(isEnabled, forKey: BLECentralManager.isEnabledKey)
             if isEnabled {
                 if centralManager?.state == .poweredOn {
                     startScanning()

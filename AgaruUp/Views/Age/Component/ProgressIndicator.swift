@@ -163,18 +163,18 @@ struct ProgressIndicator: View {
             Text(alertMessage)
         }
         .onAppear {
-            // 画面表示時にBluetooth許可をリクエスト
+            // 画面表示時にBluetooth許可をリクエスト（初期化のみ、自動ONはしない）
             bleManager.initialize()
 
-            // 既にONなら有効化
-            if bleManager.bluetoothState == .poweredOn {
-                bleManager.isEnabled = true
+            // isEnabledがtrueの場合（UserDefaultsから復元された場合）スキャン開始
+            if bleManager.isEnabled && bleManager.bluetoothState == .poweredOn {
+                bleManager.startScanning()
             }
         }
         .onChange(of: bleManager.bluetoothState) { _, state in
-            // 許可されてONになったら自動的に有効化
-            if state == .poweredOn {
-                bleManager.isEnabled = true
+            // Bluetoothが有効になったとき、isEnabledがtrueならスキャン開始
+            if state == .poweredOn && bleManager.isEnabled {
+                bleManager.startScanning()
             }
         }
     }
