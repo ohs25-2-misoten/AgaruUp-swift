@@ -27,14 +27,29 @@ struct FeedCell: View {
     /// 動画のローディング状態（バッファリング中にスピナーを表示）
     @State private var isLoadingVideo = false
     
+    /// ループ再生時のアイコン表示状態
+    @State private var showLoopIcon = false
+    
+    /// 詳細表示の状態
+    @State private var showDetails = false
+    
     /// 再生アイコンを自動で非表示にするための非同期タスク
     /// タップ時に新しいタスクを開始し、前のタスクはキャンセルされる
     /// ビュー破棄時に適切にキャンセルしてリソースリークを防止
     @State private var playIconTask: Task<Void, Never>?
     
+    /// ループアイコンを自動で非表示にするための非同期タスク
+    @State private var loopIconTask: Task<Void, Never>?
+    
     /// プレイヤーのローディング状態を監視するタイマーの購読
     /// onAppearで開始し、onDisappearでキャンセルしてリソースリークを防止
     @State private var timerCancellable: AnyCancellable?
+    
+    /// ループ再生監視用のCancellable
+    @State private var loopCancellable: AnyCancellable?
+    
+    /// currentItemの変更監視用のCancellable
+    @State private var currentItemCancellable: AnyCancellable?
 
     private let favoriteService = FavoriteService.shared
 
@@ -58,9 +73,17 @@ struct FeedCell: View {
                         .foregroundColor(.white.opacity(0.7))
                         .transition(.scale.combined(with: .opacity))
                 }
+                
+                if showLoopIcon {
+                    Image(systemName: "backward.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.white.opacity(0.7))
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPaused)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showPlayIcon)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showLoopIcon)
 
             // ローディングスピナー
             if isLoadingVideo {
@@ -77,17 +100,46 @@ struct FeedCell: View {
 
             VStack {
                 Spacer()
-                HStack {
+                HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(video.title)
                             .font(.headline)
-                            .lineLimit(2)
+                            .lineLimit(showDetails ? nil : 2)
+                        
+                        if showDetails {
+                            // タグ表示（タグがある場合のみ）
+                            if !video.tags.isEmpty {
+                                FlowLayout(spacing: 6) {
+                                    ForEach(video.tags, id: \.self) { tag in
+                                        Text(tag)
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.white.opacity(0.2))
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                .padding(.top, 4)
+                            } else {
+                                Text("タグなし")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.6))
+                                    .padding(.top, 4)
+                            }
+                        }
+                        
                         if let date = video.generatedAt {
                             Text(formatDate(date))
                                 .font(.caption)
                         }
                     }
                     .foregroundStyle(.white)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showDetails.toggle()
+                        }
+                    }
 
                     Spacer()
 
@@ -170,17 +222,69 @@ struct FeedCell: View {
                     .autoconnect()
                     .sink { _ in
                         isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+                        // プレイヤーの一時停止状態を監視（別タブ遷移時にも反映）
+                        let playerPaused = player.timeControlStatus == .paused
+                        if isPaused != playerPaused {
+                            isPaused = playerPaused
+                        }
                     }
             }
+            
+            // ループ再生の設定
+            player.actionAtItemEnd = .none
+            
+            // 既存の購読をキャンセルしてから新しい購読を設定
+            currentItemCancellable?.cancel()
+            loopCancellable?.cancel()
+            
+            // currentItemの変更を監視してループ再生を再設定
+            currentItemCancellable = player.publisher(for: \.currentItem)
+                .sink { [self] newItem in
+                    // 古い購読をキャンセル
+                    loopCancellable?.cancel()
+                    
+                    guard let item = newItem else { return }
+                    
+                    loopCancellable = NotificationCenter.default.publisher(
+                        for: .AVPlayerItemDidPlayToEndTime,
+                        object: item
+                    )
+                    .sink { [self] _ in
+                        player.seek(to: .zero)
+                        player.play()
+                        
+                        // ループアイコンを表示
+                        showLoopIcon = true
+                        loopIconTask?.cancel()
+                        loopIconTask = Task {
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            if !Task.isCancelled {
+                                await MainActor.run { showLoopIcon = false }
+                            }
+                        }
+                    }
+                }
         }
         .onDisappear {
             // ビュー破棄時にTaskをキャンセル
             playIconTask?.cancel()
             playIconTask = nil
             
+            // ループアイコンTaskをキャンセル
+            loopIconTask?.cancel()
+            loopIconTask = nil
+            
             // タイマーの購読をキャンセル
             timerCancellable?.cancel()
             timerCancellable = nil
+            
+            // currentItem監視をキャンセル
+            currentItemCancellable?.cancel()
+            currentItemCancellable = nil
+            
+            // ループ再生の監視を解除
+            loopCancellable?.cancel()
+            loopCancellable = nil
         }
     }
 

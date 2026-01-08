@@ -13,7 +13,7 @@ import SwiftUI
 final class VideoPlaybackManager {
     let player = AVPlayer()
 
-    private var savedProgress: [String: Double] = [:]
+
     private var currentVideoUrl: String?
 
     var isWarmedUp: Bool = false
@@ -46,42 +46,21 @@ final class VideoPlaybackManager {
             return
         }
 
-        saveCurrentProgress()
+        // 前の動画の進捗保存ロジックを削除して、常に最初から再生
 
         let playerItem = AVPlayerItem(url: url)
-
         player.replaceCurrentItem(with: playerItem)
         currentVideoUrl = urlString
 
-        if let savedTime = savedProgress[urlString] {
-            let time = CMTime(seconds: savedTime, preferredTimescale: 600)
-
-            player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero) {
-                [weak self] isFinished in
-                if isFinished {
-                    self?.player.play()
-                }
-            }
-        } else {
-            player.play()
-        }
+        // 保存された進捗を無視して常に最初から再生
+        player.seek(to: .zero)
+        player.play()
     }
 
-    func saveCurrentProgress() {
-        guard let url = currentVideoUrl else { return }
 
-        if let currentTime = player.currentItem?.currentTime() {
-            let seconds = CMTimeGetSeconds(currentTime)
 
-            if seconds.isFinite, seconds > 0.5 {
-                savedProgress[url] = seconds
-            }
-        }
-    }
-
-    func pauseAndSave() {
+    func pause() {
         player.pause()
-        saveCurrentProgress()
     }
 
     func resume() {

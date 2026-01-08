@@ -70,7 +70,7 @@ struct FeedView: View {
             }
         }
         .onDisappear {
-            playbackManager.pauseAndSave()
+            playbackManager.pause()
         }
     }
 
