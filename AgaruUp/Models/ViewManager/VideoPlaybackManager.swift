@@ -47,10 +47,8 @@ final class VideoPlaybackManager {
         }
 
         // 前の動画の進捗保存ロジックを削除して、常に最初から再生
-        // saveCurrentProgress() 
 
         let playerItem = AVPlayerItem(url: url)
-
         player.replaceCurrentItem(with: playerItem)
         currentVideoUrl = urlString
 
