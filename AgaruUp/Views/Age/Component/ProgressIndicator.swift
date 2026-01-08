@@ -12,30 +12,30 @@ struct ProgressIndicator: View {
     @State private var showConfetti: Bool = false
     @State private var isCompleted: Bool = false
     @State private var isReporting: Bool = false
-    
+
     // アラート用のState
     @State private var showAlert: Bool = false
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
     @State private var isSuccess: Bool = false
-    
+
     /// BLEセントラルマネージャー
     private var bleManager = BLECentralManager.shared
 
     private let stepAmount: Double = 0.1
     private let backgroundColor = Color.gray.opacity(0.3)
     private let indicatorColor = Color.orange
-    
+
     /// ユーザーID（API送信用）
     var userId: String = "eb2df825-ece7-4806-a38a-91fd223d1254"
     /// ロケーションID（API送信用）
     var locationId: String = "c5f806ab-6674-41e0-b869-aaa5f55e36c3"
     /// 完了時のコールバック（任意）
     var onComplete: (() -> Void)?
-    
+
     /// デバッグモード: trueの場合、失敗時にリセットしない
     var isDebugMode: Bool = false
-    
+
     /// イニシャライザ
     init(
         userId: String = "eb2df825-ece7-4806-a38a-91fd223d1254",
@@ -48,7 +48,7 @@ struct ProgressIndicator: View {
         self.isDebugMode = isDebugMode
         self.onComplete = onComplete
     }
-    
+
     /// 進捗に応じた上部のグラデーション色
     private var topGradientColor: Color {
         // 進捗が上がるにつれて透明からオレンジに変化
@@ -61,14 +61,14 @@ struct ProgressIndicator: View {
             LinearGradient(
                 colors: [
                     topGradientColor,
-                    Color(.systemBackground)
+                    Color(.systemBackground),
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
             .animation(.easeInOut(duration: 0.5), value: progress)
-            
+
             VStack(spacing: 25) {
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 15)
@@ -95,8 +95,10 @@ struct ProgressIndicator: View {
                     ZStack {
                         Circle()
                             .fill(bleManager.isEnabled ? Color.orange : Color.gray)
-                            .shadow(color: (bleManager.isEnabled ? Color.orange : Color.gray).opacity(0.5), radius: 10, x: 0, y: 5)
-                        
+                            .shadow(
+                                color: (bleManager.isEnabled ? Color.orange : Color.gray).opacity(
+                                    0.5), radius: 10, x: 0, y: 5)
+
                         if isReporting {
                             ProgressView()
                                 .scaleEffect(2)
@@ -112,64 +114,16 @@ struct ProgressIndicator: View {
                 .frame(width: 280, height: 280)
                 .contentShape(Circle())
                 .disabled(isCompleted || isReporting || !bleManager.isEnabled)
-                
-                // BLEデバイス デバッグ情報
-                if let device = bleManager.discoveredDevice {
-                    VStack(spacing: 8) {
-                        Text("🔗 接続デバイス")
-                            .font(.headline)
-                            .foregroundColor(.orange)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("名称:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(device.name)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            
-                            HStack {
-                                Text("UUID:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(device.id.uuidString.prefix(8) + "...")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            
-                            HStack {
-                                Text("距離:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(String(format: "%.2f m", device.distance))
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(device.distance <= 5 ? .green : .orange)
-                            }
-                            
-                            HStack {
-                                Text("RSSI:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("\(device.rssi) dBm")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-                    .padding(.top, 20)
-                }
-                
+
                 // BLEスキャン オン/オフ トグル
                 Toggle(isOn: Bindable(bleManager).isEnabled) {
                     HStack {
-                        Image(systemName: bleManager.isEnabled ? "antenna.radiowaves.left.and.right" : "antenna.radiowaves.left.and.right.slash")
-                            .foregroundColor(bleManager.isEnabled ? .green : .gray)
+                        Image(
+                            systemName: bleManager.isEnabled
+                                ? "antenna.radiowaves.left.and.right"
+                                : "antenna.radiowaves.left.and.right.slash"
+                        )
+                        .foregroundColor(bleManager.isEnabled ? .green : .gray)
                         Text("カメラ検出")
                             .font(.subheadline)
                     }
@@ -179,7 +133,7 @@ struct ProgressIndicator: View {
                 .padding(.top, 16)
             }
             .padding()
-            
+
             // パーティクルエフェクト
             ConfettiView(isShowing: $showConfetti)
         }
@@ -201,30 +155,30 @@ struct ProgressIndicator: View {
             bleManager.initialize()
         }
     }
-    
+
     /// プログレスを増加させ、100%になったらAPIを呼び出す
     private func incrementProgress() {
         progress = min(1.0, progress + stepAmount)
-        
+
         // 100%に達したらアニメーション再生 → API呼び出し
         if progress >= 1.0 && !isCompleted {
             handleCompletion()
         }
     }
-    
+
     /// 100%達成時の処理
     private func handleCompletion() {
         isCompleted = true
-        
+
         // パーティクルエフェクトを表示
         showConfetti = true
-        
+
         // API呼び出し
         Task {
             await sendReport()
         }
     }
-    
+
     /// 状態を初期状態にリセット
     private func resetState() {
         progress = 0.0
@@ -233,11 +187,11 @@ struct ProgressIndicator: View {
         showConfetti = false
         isSuccess = false
     }
-    
+
     /// 接続デバイスのUUIDを使ってAPIリクエストを送信
     private func sendReport() async {
-		 isReporting = true
-        
+        isReporting = true
+
         // 接続デバイスのUUIDを取得
         guard let device = bleManager.discoveredDevice else {
             await MainActor.run {
@@ -250,35 +204,35 @@ struct ProgressIndicator: View {
             isReporting = false
             return
         }
-        
+
         // デバイスUUIDからエンドポイントを構築
         let deviceUUID = device.id.uuidString.lowercased()
         let baseURL = "https://\(deviceUUID).easy-hacking.com"
-        
+
         do {
             guard let url = URL(string: "\(baseURL)/report") else {
                 throw URLError(.badURL)
             }
-            
+
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
+
             let body = ReportRequest(user: userId, location: locationId)
             request.httpBody = try JSONEncoder().encode(body)
-            
+
             let (data, response) = try await URLSession.shared.data(for: request)
-            
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw URLError(.badServerResponse)
             }
-            
+
             print("===== アゲ報告完了 =====")
             print("Endpoint: \(baseURL)/report")
             print("Status Code: \(httpResponse.statusCode)")
             print("Response: \(String(data: data, encoding: .utf8) ?? "nil")")
             print("========================")
-            
+
             if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
                 await MainActor.run {
                     isSuccess = true
@@ -294,7 +248,7 @@ struct ProgressIndicator: View {
             print("Error: \(error)")
             print("LocalizedDescription: \(error.localizedDescription)")
             print("========================")
-            
+
             await MainActor.run {
                 isSuccess = false
                 alertTitle = "エラー 😢"
@@ -304,7 +258,7 @@ struct ProgressIndicator: View {
                 isCompleted = false
             }
         }
-        
+
         isReporting = false
     }
 }

@@ -6,22 +6,22 @@
 //
 
 import Foundation
-import UserNotifications
 import UIKit
+import UserNotifications
 
 /// ローカル通知を管理するマネージャー
 @Observable
 final class NotificationManager: NSObject {
     static let shared = NotificationManager()
-    
+
     /// 通知が許可されているかどうか
     var isAuthorized: Bool = false
-    
+
     private override init() {
         super.init()
         checkAuthorizationStatus()
     }
-    
+
     /// 通知権限の状態を確認
     func checkAuthorizationStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -30,7 +30,7 @@ final class NotificationManager: NSObject {
             }
         }
     }
-    
+
     /// 通知権限をリクエスト
     func requestAuthorization() async -> Bool {
         do {
@@ -46,63 +46,37 @@ final class NotificationManager: NSObject {
             return false
         }
     }
-    
-    /// デバイス発見時の通知を送信（デバッグ用：フォアグラウンドでも送信）
-    func sendDeviceFoundNotification(deviceName: String, distance: Double? = nil) {
+
+    /// デバイス発見時の通知を送信（バックグラウンド時のみ）
+    func sendDeviceFoundNotification(deviceName: String) {
+        // バックグラウンド時のみ通知を送信
+        guard UIApplication.shared.applicationState != .active else {
+            print("[Notification] App is active, skipping notification")
+            return
+        }
+
         guard isAuthorized else {
             print("[Notification] Not authorized, skipping notification")
             return
         }
-        
+
         let content = UNMutableNotificationContent()
         content.title = "カメラを発見！📸"
-        if let distance = distance {
-            content.body = "\(deviceName) が \(String(format: "%.2f", distance))m の距離にあります"
-        } else {
-            content.body = "\(deviceName) を発見しました！"
-        }
+        content.body = "\(deviceName) が近くにあります。アゲ報告の準備ができました！"
         content.sound = .default
         content.interruptionLevel = .active
-        
+
         let request = UNNotificationRequest(
             identifier: "device-found-\(UUID().uuidString)",
             content: content,
-            trigger: nil // 即時配信
+            trigger: nil  // 即時配信
         )
-        
+
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("[Notification] Failed to send notification: \(error)")
             } else {
                 print("[Notification] Notification sent for device: \(deviceName)")
-            }
-        }
-    }
-    
-    /// スキャン開始時の通知を送信（デバッグ用）
-    func sendScanStartedNotification() {
-        guard isAuthorized else {
-            print("[Notification] Not authorized, skipping notification")
-            return
-        }
-        
-        let content = UNMutableNotificationContent()
-        content.title = "BLEスキャン開始 �"
-        content.body = "rpi-camera を探しています..."
-        content.sound = .default
-        content.interruptionLevel = .active
-        
-        let request = UNNotificationRequest(
-            identifier: "scan-started-\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("[Notification] Failed to send scan notification: \(error)")
-            } else {
-                print("[Notification] Scan started notification sent")
             }
         }
     }
