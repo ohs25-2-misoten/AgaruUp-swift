@@ -66,6 +66,48 @@ struct TopView: View {
                             .padding()
 
                         Spacer()
+
+                        // ボタンをカルーセル内に移動
+                        Button(action: {
+                            if index == totalPages - 1 {
+                                completeOnboarding()
+                            } else {
+                                goToNextPage()
+                            }
+                        }) {
+                            ZStack(alignment: .leading) {
+                                // 背景（未完了部分）
+                                Color.gray.opacity(0.3)
+
+                                // 完了部分（プログレスバー）の設定
+                                if index == totalPages - 1 {
+                                    // 最後のページは常に全塗り
+                                    Color.orange
+                                } else if index == currentPage {
+                                    // 現在のページ：progressに従う
+                                    GeometryReader { geometry in
+                                        Color.orange
+                                            .frame(width: geometry.size.width * progress)
+                                    }
+                                } else if index < maxSeenPage {
+                                    // 既読ページ（移動中など）：全塗り
+                                    Color.orange
+                                }
+                                // index > currentPage (未来のページ) は背景グレーのまま
+
+                                // テキスト
+                                Text(index == totalPages - 1 ? "はじめる" : "次へ")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .frame(height: 50)
+                            .cornerRadius(12)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 50)
+
                         Spacer()
                     }
                     .tag(index)
@@ -73,44 +115,6 @@ struct TopView: View {
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-
-            VStack {
-                Spacer()
-                Button(action: {
-                    if currentPage == totalPages - 1 {
-                        completeOnboarding()
-                    } else {
-                        goToNextPage()
-                    }
-                }) {
-                    ZStack(alignment: .leading) {
-                        if currentPage == totalPages - 1 {
-                            // 最後のページは最初から全塗り
-                            Color.orange
-                        } else {
-                            // 背景（未完了部分）
-                            Color.gray.opacity(0.3)
-
-                            // 完了部分（プログレスバー）
-                            GeometryReader { geometry in
-                                Color.orange
-                                    .frame(width: geometry.size.width * progress)
-                            }
-                        }
-
-                        // テキスト
-                        Text(currentPage == totalPages - 1 ? "はじめる" : "次へ")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .frame(height: 50)
-                    .cornerRadius(12)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 50)
-            }
         }
         .onReceive(timer) { _ in
             // 最後のページ、または既読ページでは自動遷移しない
@@ -130,7 +134,7 @@ struct TopView: View {
                 maxSeenPage = newValue
             }
 
-            // 既読ページに戻った場合はプログレス満タン、新規ページは0から
+            // シンプルにリセット（アニメーション制御は不要になった）
             if newValue < maxSeenPage {
                 progress = 1.0
             } else {
