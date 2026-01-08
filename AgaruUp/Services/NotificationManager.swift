@@ -47,14 +47,8 @@ final class NotificationManager: NSObject {
         }
     }
     
-    /// デバイス発見時の通知を送信
-    func sendDeviceFoundNotification(deviceName: String) {
-        // バックグラウンド時のみ通知を送信
-        guard UIApplication.shared.applicationState != .active else {
-            print("[Notification] App is active, skipping notification")
-            return
-        }
-        
+    /// デバイス発見時の通知を送信（デバッグ用：フォアグラウンドでも送信）
+    func sendDeviceFoundNotification(deviceName: String, distance: Double? = nil) {
         guard isAuthorized else {
             print("[Notification] Not authorized, skipping notification")
             return
@@ -62,7 +56,11 @@ final class NotificationManager: NSObject {
         
         let content = UNMutableNotificationContent()
         content.title = "カメラを発見！📸"
-        content.body = "\(deviceName) が近くにあります。アゲ報告の準備ができました！"
+        if let distance = distance {
+            content.body = "\(deviceName) が \(String(format: "%.2f", distance))m の距離にあります"
+        } else {
+            content.body = "\(deviceName) を発見しました！"
+        }
         content.sound = .default
         content.interruptionLevel = .active
         
@@ -77,6 +75,34 @@ final class NotificationManager: NSObject {
                 print("[Notification] Failed to send notification: \(error)")
             } else {
                 print("[Notification] Notification sent for device: \(deviceName)")
+            }
+        }
+    }
+    
+    /// スキャン開始時の通知を送信（デバッグ用）
+    func sendScanStartedNotification() {
+        guard isAuthorized else {
+            print("[Notification] Not authorized, skipping notification")
+            return
+        }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "BLEスキャン開始 �"
+        content.body = "rpi-camera を探しています..."
+        content.sound = .default
+        content.interruptionLevel = .active
+        
+        let request = UNNotificationRequest(
+            identifier: "scan-started-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("[Notification] Failed to send scan notification: \(error)")
+            } else {
+                print("[Notification] Scan started notification sent")
             }
         }
     }

@@ -91,6 +91,9 @@ final class BLECentralManager: NSObject {
         print("[BLE] Starting scan for \(targetDeviceName)")
         isScanning = true
         
+        // デバッグ用: スキャン開始通知
+        NotificationManager.shared.sendScanStartedNotification()
+        
         // バッテリー消費を抑えるため、重複検出を無効化
         // ただし、距離をリアルタイム更新するため有効化
         centralManager.scanForPeripherals(
@@ -158,21 +161,16 @@ extension BLECentralManager: CBCentralManagerDelegate {
             distance: distance
         )
         
-        // 10m以下の場合のみ更新
-        if distance <= distanceThreshold {
-            let wasNotFound = !isDeviceFound
-            discoveredDevice = device
-            
-            print("[BLE] Found \(name): RSSI=\(rssiValue)dBm, Distance=\(String(format: "%.2f", distance))m")
-            
-            // 初めて見つけた場合、バックグラウンドなら通知を送信
-            if wasNotFound {
-                NotificationManager.shared.sendDeviceFoundNotification(deviceName: name)
-            }
-        } else if discoveredDevice?.id == peripheral.identifier {
-            // 距離が離れた場合、デバイスをクリア
-            discoveredDevice = nil
+        print("[BLE] Found \(name): RSSI=\(rssiValue)dBm, Distance=\(String(format: "%.2f", distance))m")
+        
+        // デバッグ用：発見したら毎回通知を送信（距離に関係なく）
+        let wasNotFound = discoveredDevice == nil
+        if wasNotFound {
+            NotificationManager.shared.sendDeviceFoundNotification(deviceName: name, distance: distance)
         }
+        
+        // デバイス情報を更新（距離に関係なく）
+        discoveredDevice = device
     }
     
     // MARK: - State Restoration
