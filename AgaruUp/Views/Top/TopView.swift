@@ -130,15 +130,19 @@ struct TopView: View {
             }
         }
         .onChange(of: currentPage) { _, newValue in
-            if newValue > maxSeenPage {
-                maxSeenPage = newValue
-            }
+            // ステート更新がページ遷移アニメーションと干渉しないようにアニメーションを無効化する
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                if newValue > maxSeenPage {
+                    maxSeenPage = newValue
+                }
 
-            // シンプルにリセット（アニメーション制御は不要になった）
-            if newValue < maxSeenPage {
-                progress = 1.0
-            } else {
-                progress = 0.0
+                if newValue < maxSeenPage {
+                    progress = 1.0
+                } else {
+                    progress = 0.0
+                }
             }
         }
     }
