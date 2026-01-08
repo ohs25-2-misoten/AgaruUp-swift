@@ -165,6 +165,7 @@ private struct FavoriteVideoGridItem: View {
                 }
             }
         }
+        .contentShape(Rectangle())
     }
 
     private static let dateFormatter: DateFormatter = {
