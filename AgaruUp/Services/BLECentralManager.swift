@@ -62,13 +62,18 @@ final class BLECentralManager: NSObject {
     
     private override init() {
         super.init()
+    }
+    
+    /// BLEスキャンを初期化して開始
+    func initialize() {
+        guard centralManager == nil else { return }
+        
         // バックグラウンドでのスキャンを有効化
         centralManager = CBCentralManager(
-            delegate: nil,
+            delegate: self,
             queue: nil,
             options: [CBCentralManagerOptionRestoreIdentifierKey: "com.agaruup.ble.central"]
         )
-        centralManager.delegate = self
     }
     
     /// スキャンを開始

@@ -183,6 +183,10 @@ struct ProgressIndicator: View {
         } message: {
             Text(alertMessage)
         }
+        .onAppear {
+            // BLEスキャンを開始
+            bleManager.initialize()
+        }
     }
     
     /// プログレスを増加させ、100%になったらAPIを呼び出す
