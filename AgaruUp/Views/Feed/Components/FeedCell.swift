@@ -44,6 +44,9 @@ struct FeedCell: View {
     
     /// ループ再生監視用のCancellable
     @State private var loopCancellable: AnyCancellable?
+    
+    /// currentItemの変更監視用のCancellable
+    @State private var currentItemCancellable: AnyCancellable?
 
     private let favoriteService = FavoriteService.shared
 
@@ -190,29 +193,36 @@ struct FeedCell: View {
                     }
             }
             
-            // ループ再生の設定 (Combine)
+            // ループ再生の設定
             player.actionAtItemEnd = .none
             
-            if let currentItem = player.currentItem {
-                loopCancellable = NotificationCenter.default.publisher(
-                    for: .AVPlayerItemDidPlayToEndTime,
-                    object: currentItem
-                )
-                .sink { [self] _ in
-                    player.seek(to: .zero)
-                    player.play()
+            // currentItemの変更を監視してループ再生を再設定
+            currentItemCancellable = player.publisher(for: \.currentItem)
+                .sink { [self] newItem in
+                    // 古い購読をキャンセル
+                    loopCancellable?.cancel()
                     
-                    // ループアイコンを表示
-                    showLoopIcon = true
-                    loopIconTask?.cancel()
-                    loopIconTask = Task {
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                        if !Task.isCancelled {
-                            await MainActor.run { showLoopIcon = false }
+                    guard let item = newItem else { return }
+                    
+                    loopCancellable = NotificationCenter.default.publisher(
+                        for: .AVPlayerItemDidPlayToEndTime,
+                        object: item
+                    )
+                    .sink { [self] _ in
+                        player.seek(to: .zero)
+                        player.play()
+                        
+                        // ループアイコンを表示
+                        showLoopIcon = true
+                        loopIconTask?.cancel()
+                        loopIconTask = Task {
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            if !Task.isCancelled {
+                                await MainActor.run { showLoopIcon = false }
+                            }
                         }
                     }
                 }
-            }
         }
         .onDisappear {
             // ビュー破棄時にTaskをキャンセル
@@ -226,6 +236,10 @@ struct FeedCell: View {
             // タイマーの購読をキャンセル
             timerCancellable?.cancel()
             timerCancellable = nil
+            
+            // currentItem監視をキャンセル
+            currentItemCancellable?.cancel()
+            currentItemCancellable = nil
             
             // ループ再生の監視を解除
             loopCancellable?.cancel()
