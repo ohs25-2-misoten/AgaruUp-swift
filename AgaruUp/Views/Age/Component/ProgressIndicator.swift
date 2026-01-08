@@ -164,6 +164,19 @@ struct ProgressIndicator: View {
                     }
                     .padding(.top, 20)
                 }
+                
+                // BLEスキャン オン/オフ トグル
+                Toggle(isOn: Bindable(bleManager).isEnabled) {
+                    HStack {
+                        Image(systemName: bleManager.isEnabled ? "antenna.radiowaves.left.and.right" : "antenna.radiowaves.left.and.right.slash")
+                            .foregroundColor(bleManager.isEnabled ? .green : .gray)
+                        Text("カメラ検出")
+                            .font(.subheadline)
+                    }
+                }
+                .tint(.green)
+                .padding(.horizontal, 40)
+                .padding(.top, 16)
             }
             .padding()
             

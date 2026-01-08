@@ -38,7 +38,8 @@ final class BLECentralManager: NSObject {
     static let shared = BLECentralManager()
     
     /// ターゲットデバイス名
-    private let targetDeviceName = "rpi-camera"
+    // private let targetDeviceName = "rpi-camera"
+    private let targetDeviceName = "hoso macho"
     /// 検出距離の閾値（メートル）
     private let distanceThreshold: Double = 10.0
     
@@ -56,6 +57,20 @@ final class BLECentralManager: NSObject {
     
     /// スキャン中かどうか
     var isScanning: Bool = false
+    
+    /// BLEスキャンが有効かどうか
+    var isEnabled: Bool = true {
+        didSet {
+            if isEnabled {
+                if centralManager?.state == .poweredOn {
+                    startScanning()
+                }
+            } else {
+                stopScanning()
+                discoveredDevice = nil
+            }
+        }
+    }
     
     /// Bluetoothの状態
     var bluetoothState: CBManagerState = .unknown
@@ -78,6 +93,11 @@ final class BLECentralManager: NSObject {
     
     /// スキャンを開始
     func startScanning() {
+        guard isEnabled else {
+            print("[BLE] Scanning is disabled")
+            return
+        }
+        
         guard centralManager.state == .poweredOn else {
             print("[BLE] Bluetooth is not powered on")
             return
