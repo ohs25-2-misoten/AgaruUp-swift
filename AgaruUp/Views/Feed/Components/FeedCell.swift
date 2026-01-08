@@ -196,6 +196,10 @@ struct FeedCell: View {
             // ループ再生の設定
             player.actionAtItemEnd = .none
             
+            // 既存の購読をキャンセルしてから新しい購読を設定
+            currentItemCancellable?.cancel()
+            loopCancellable?.cancel()
+            
             // currentItemの変更を監視してループ再生を再設定
             currentItemCancellable = player.publisher(for: \.currentItem)
                 .sink { [self] newItem in
