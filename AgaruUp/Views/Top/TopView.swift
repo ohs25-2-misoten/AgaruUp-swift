@@ -20,7 +20,7 @@ struct TopView: View {
     private let totalPages = 4
 
     // タイマー設定
-    private let pageDuration: TimeInterval = 7.0  // 1ページあたりの表示時間（秒）
+    private let pageDuration: TimeInterval = 10.0  // 1ページあたりの表示時間（秒）
     private let timerInterval: TimeInterval = 0.05  // 更新間隔（秒）
     private let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
 
