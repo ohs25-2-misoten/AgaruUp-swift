@@ -190,6 +190,11 @@ struct FeedCell: View {
                     .autoconnect()
                     .sink { _ in
                         isLoadingVideo = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+                        // プレイヤーの一時停止状態を監視（別タブ遷移時にも反映）
+                        let playerPaused = player.timeControlStatus == .paused
+                        if isPaused != playerPaused {
+                            isPaused = playerPaused
+                        }
                     }
             }
             
