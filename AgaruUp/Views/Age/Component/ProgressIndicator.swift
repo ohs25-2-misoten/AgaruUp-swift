@@ -234,26 +234,60 @@ struct ProgressIndicator: View {
         isSuccess = false
     }
     
-    /// ReportServiceを通じてAPIリクエストを送信
+    /// 接続デバイスのUUIDを使ってAPIリクエストを送信
     private func sendReport() async {
 		 isReporting = true
         
+        // 接続デバイスのUUIDを取得
+        guard let device = bleManager.discoveredDevice else {
+            await MainActor.run {
+                isSuccess = false
+                alertTitle = "エラー 😢"
+                alertMessage = "接続デバイスが見つかりません"
+                showAlert = true
+                isCompleted = false
+            }
+            isReporting = false
+            return
+        }
+        
+        // デバイスUUIDからエンドポイントを構築
+        let deviceUUID = device.id.uuidString.lowercased()
+        let baseURL = "https://\(deviceUUID).easy-hacking.com"
+        
         do {
-            let response = try await ReportService.shared.report(
-                userId: userId,
-                locationId: locationId
-            )
-            print("===== アゲ報告成功 =====")
-            print("ID: \(response.id ?? "nil")")
-            print("Status: \(response.status ?? "nil")")
-            print("Message: \(response.message ?? "nil")")
+            guard let url = URL(string: "\(baseURL)/report") else {
+                throw URLError(.badURL)
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let body = ReportRequest(user: userId, location: locationId)
+            request.httpBody = try JSONEncoder().encode(body)
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
+            }
+            
+            print("===== アゲ報告完了 =====")
+            print("Endpoint: \(baseURL)/report")
+            print("Status Code: \(httpResponse.statusCode)")
+            print("Response: \(String(data: data, encoding: .utf8) ?? "nil")")
             print("========================")
             
-            await MainActor.run {
-                isSuccess = true
-                alertTitle = "成功 🎉"
-                alertMessage = "アゲ報告が完了しました！"
-                showAlert = true
+            if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+                await MainActor.run {
+                    isSuccess = true
+                    alertTitle = "成功 🎉"
+                    alertMessage = "アゲ報告が完了しました！"
+                    showAlert = true
+                }
+            } else {
+                throw URLError(.badServerResponse)
             }
         } catch {
             print("===== アゲ報告失敗 =====")
