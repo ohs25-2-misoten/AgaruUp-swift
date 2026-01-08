@@ -110,9 +110,14 @@ struct ProgressIndicator: View {
                                 .tint(.white)
                         } else if bleManager.isEnabled && !bleManager.isDeviceFound {
                             // 検索中はロード表示
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .tint(.white)
+                            VStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(1.5)
+                                    .tint(.white)
+                                Text("対応機器を検索中")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
                         } else {
                             Text(isCompleted ? "🎉" : (bleManager.isEnabled ? "アガる" : "ONにする"))
                                 .font(.largeTitle)
@@ -143,6 +148,20 @@ struct ProgressIndicator: View {
                 .tint(.green)
                 .padding(.horizontal, 40)
                 .padding(.top, 16)
+
+                // デバイス情報表示（発見時のみ）
+                if let device = bleManager.discoveredDevice {
+                    VStack(spacing: 4) {
+                        Text("UUID: \(device.id.uuidString.prefix(8))...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(String(format: "距離: %.1f m", device.distance))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.top, 8)
+                }
             }
             .padding()
 
