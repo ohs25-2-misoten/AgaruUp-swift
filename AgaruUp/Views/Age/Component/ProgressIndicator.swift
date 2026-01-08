@@ -13,7 +13,11 @@ struct ProgressIndicator: View {
     @State private var isCompleted: Bool = false
     @State private var isReporting: Bool = false
     
-
+    // アラート用のState
+    @State private var showAlert: Bool = false
+    @State private var alertTitle: String = ""
+    @State private var alertMessage: String = ""
+    @State private var isSuccess: Bool = false
 
     private let stepAmount: Double = 0.1
     private let backgroundColor = Color.gray.opacity(0.3)
@@ -98,7 +102,19 @@ struct ProgressIndicator: View {
             // パーティクルエフェクト
             ConfettiView(isShowing: $showConfetti)
         }
-
+        .alert(alertTitle, isPresented: $showAlert) {
+            Button("OK") {
+                if isSuccess {
+                    resetState()
+                    onComplete?()
+                } else if !isDebugMode {
+                    // デバッグモードでない場合は失敗時もリセット
+                    resetState()
+                }
+            }
+        } message: {
+            Text(alertMessage)
+        }
     }
     
     /// プログレスを増加させ、100%になったらAPIを呼び出す
@@ -130,6 +146,7 @@ struct ProgressIndicator: View {
         isCompleted = false
         isReporting = false
         showConfetti = false
+        isSuccess = false
     }
     
     /// ReportServiceを通じてAPIリクエストを送信
@@ -148,18 +165,24 @@ struct ProgressIndicator: View {
             print("========================")
             
             await MainActor.run {
-                resetState()
-                onComplete?()
+                isSuccess = true
+                alertTitle = "成功 🎉"
+                alertMessage = "アゲ報告が完了しました！"
+                showAlert = true
             }
         } catch {
-            print("===== アゲ報告失敗（UIは成功扱い） =====")
+            print("===== アゲ報告失敗 =====")
             print("Error: \(error)")
             print("LocalizedDescription: \(error.localizedDescription)")
             print("========================")
             
             await MainActor.run {
-                resetState()
-                onComplete?()
+                isSuccess = false
+                alertTitle = "エラー 😢"
+                alertMessage = "報告に失敗しました: \(error.localizedDescription)"
+                showAlert = true
+                // 失敗時はリトライ可能にする
+                isCompleted = false
             }
         }
         
