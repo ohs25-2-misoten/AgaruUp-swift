@@ -30,6 +30,9 @@ struct FeedCell: View {
     /// ループ再生時のアイコン表示状態
     @State private var showLoopIcon = false
     
+    /// 詳細表示の状態
+    @State private var showDetails = false
+    
     /// 再生アイコンを自動で非表示にするための非同期タスク
     /// タップ時に新しいタスクを開始し、前のタスクはキャンセルされる
     /// ビュー破棄時に適切にキャンセルしてリソースリークを防止
@@ -97,17 +100,46 @@ struct FeedCell: View {
 
             VStack {
                 Spacer()
-                HStack {
+                HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(video.title)
                             .font(.headline)
-                            .lineLimit(2)
+                            .lineLimit(showDetails ? nil : 3)
+                        
+                        if showDetails {
+                            // タグ表示（タグがある場合のみ）
+                            if !video.tags.isEmpty {
+                                FlowLayout(spacing: 6) {
+                                    ForEach(video.tags, id: \.self) { tag in
+                                        Text(tag)
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.white.opacity(0.2))
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                .padding(.top, 4)
+                            } else {
+                                Text("タグなし")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.6))
+                                    .padding(.top, 4)
+                            }
+                        }
+                        
                         if let date = video.generatedAt {
                             Text(formatDate(date))
                                 .font(.caption)
                         }
                     }
                     .foregroundStyle(.white)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showDetails.toggle()
+                        }
+                    }
 
                     Spacer()
 
