@@ -38,8 +38,7 @@ final class BLECentralManager: NSObject {
     static let shared = BLECentralManager()
     
     /// ターゲットデバイス名
-    // private let targetDeviceName = "rpi-camera"
-    private let targetDeviceName = "hoso macho"
+    private let targetDeviceName = "rpi-camera"
     /// 検出距離の閾値（メートル）
     private let distanceThreshold: Double = 10.0
     
