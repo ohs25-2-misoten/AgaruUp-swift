@@ -18,6 +18,9 @@ struct ProgressIndicator: View {
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
     @State private var isSuccess: Bool = false
+    
+    /// BLEセントラルマネージャー
+    private var bleManager = BLECentralManager.shared
 
     private let stepAmount: Double = 0.1
     private let backgroundColor = Color.gray.opacity(0.3)
@@ -32,6 +35,19 @@ struct ProgressIndicator: View {
     
     /// デバッグモード: trueの場合、失敗時にリセットしない
     var isDebugMode: Bool = false
+    
+    /// イニシャライザ
+    init(
+        userId: String = "eb2df825-ece7-4806-a38a-91fd223d1254",
+        locationId: String = "c5f806ab-6674-41e0-b869-aaa5f55e36c3",
+        isDebugMode: Bool = false,
+        onComplete: (() -> Void)? = nil
+    ) {
+        self.userId = userId
+        self.locationId = locationId
+        self.isDebugMode = isDebugMode
+        self.onComplete = onComplete
+    }
     
     /// 進捗に応じた上部のグラデーション色
     private var topGradientColor: Color {
@@ -96,6 +112,58 @@ struct ProgressIndicator: View {
                 .frame(width: 280, height: 280)
                 .contentShape(Circle())
                 .disabled(isCompleted || isReporting)
+                
+                // BLEデバイス デバッグ情報
+                if let device = bleManager.discoveredDevice {
+                    VStack(spacing: 8) {
+                        Text("🔗 接続デバイス")
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("名称:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(device.name)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            
+                            HStack {
+                                Text("UUID:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(device.id.uuidString.prefix(8) + "...")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            
+                            HStack {
+                                Text("距離:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(String(format: "%.2f m", device.distance))
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(device.distance <= 5 ? .green : .orange)
+                            }
+                            
+                            HStack {
+                                Text("RSSI:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(device.rssi) dBm")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
+                    .padding(.top, 20)
+                }
             }
             .padding()
             
