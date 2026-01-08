@@ -94,15 +94,15 @@ struct ProgressIndicator: View {
                 }) {
                     ZStack {
                         Circle()
-                            .fill(Color.orange)
-                            .shadow(color: Color.orange.opacity(0.5), radius: 10, x: 0, y: 5)
+                            .fill(bleManager.isEnabled ? Color.orange : Color.gray)
+                            .shadow(color: (bleManager.isEnabled ? Color.orange : Color.gray).opacity(0.5), radius: 10, x: 0, y: 5)
                         
                         if isReporting {
                             ProgressView()
                                 .scaleEffect(2)
                                 .tint(.white)
                         } else {
-                            Text(isCompleted ? "🎉" : "アガる")
+                            Text(isCompleted ? "🎉" : (bleManager.isEnabled ? "アガる" : "検出OFF"))
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
@@ -111,7 +111,7 @@ struct ProgressIndicator: View {
                 }
                 .frame(width: 280, height: 280)
                 .contentShape(Circle())
-                .disabled(isCompleted || isReporting)
+                .disabled(isCompleted || isReporting || !bleManager.isEnabled)
                 
                 // BLEデバイス デバッグ情報
                 if let device = bleManager.discoveredDevice {
