@@ -59,7 +59,7 @@ final class VideoPlaybackManager {
 
 
 
-    func pauseAndSave() {
+    func pause() {
         player.pause()
     }
 
