@@ -108,6 +108,11 @@ struct ProgressIndicator: View {
                             ProgressView()
                                 .scaleEffect(2)
                                 .tint(.white)
+                        } else if bleManager.isEnabled && !bleManager.isDeviceFound {
+                            // 検索中はロード表示
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(.white)
                         } else {
                             Text(isCompleted ? "🎉" : (bleManager.isEnabled ? "アガる" : "ONにする"))
                                 .font(.largeTitle)
@@ -118,7 +123,9 @@ struct ProgressIndicator: View {
                 }
                 .frame(width: 280, height: 280)
                 .contentShape(Circle())
-                .disabled(isCompleted || isReporting)
+                .disabled(
+                    isCompleted || isReporting
+                        || (bleManager.isEnabled && !bleManager.isDeviceFound))
 
                 // BLEスキャン オン/オフ トグル
                 Toggle(isOn: Bindable(bleManager).isEnabled) {
