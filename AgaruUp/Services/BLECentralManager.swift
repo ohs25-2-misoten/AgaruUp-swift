@@ -58,7 +58,7 @@ final class BLECentralManager: NSObject {
     var isScanning: Bool = false
 
     /// BLEスキャンが有効かどうか
-    var isEnabled: Bool = true {
+    var isEnabled: Bool = false {
         didSet {
             if isEnabled {
                 if centralManager?.state == .poweredOn {

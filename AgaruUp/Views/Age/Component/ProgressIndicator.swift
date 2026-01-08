@@ -5,6 +5,7 @@
 //  Created by 拓実 on 2025/11/12.
 //
 
+import CoreBluetooth
 import SwiftUI
 
 struct ProgressIndicator: View {
@@ -90,7 +91,11 @@ struct ProgressIndicator: View {
                 .animation(.easeInOut(duration: 0.5), value: progress)
 
                 Button(action: {
-                    incrementProgress()
+                    if !bleManager.isEnabled {
+                        bleManager.isEnabled = true
+                    } else {
+                        incrementProgress()
+                    }
                 }) {
                     ZStack {
                         Circle()
@@ -104,7 +109,7 @@ struct ProgressIndicator: View {
                                 .scaleEffect(2)
                                 .tint(.white)
                         } else {
-                            Text(isCompleted ? "🎉" : (bleManager.isEnabled ? "アガる" : "検出OFF"))
+                            Text(isCompleted ? "🎉" : (bleManager.isEnabled ? "アガる" : "ONにする"))
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
@@ -113,7 +118,7 @@ struct ProgressIndicator: View {
                 }
                 .frame(width: 280, height: 280)
                 .contentShape(Circle())
-                .disabled(isCompleted || isReporting || !bleManager.isEnabled)
+                .disabled(isCompleted || isReporting)
 
                 // BLEスキャン オン/オフ トグル
                 Toggle(isOn: Bindable(bleManager).isEnabled) {
@@ -151,8 +156,19 @@ struct ProgressIndicator: View {
             Text(alertMessage)
         }
         .onAppear {
-            // BLEスキャンを開始
+            // 画面表示時にBluetooth許可をリクエスト
             bleManager.initialize()
+
+            // 既にONなら有効化
+            if bleManager.bluetoothState == .poweredOn {
+                bleManager.isEnabled = true
+            }
+        }
+        .onChange(of: bleManager.bluetoothState) { _, state in
+            // 許可されてONになったら自動的に有効化
+            if state == .poweredOn {
+                bleManager.isEnabled = true
+            }
         }
     }
 

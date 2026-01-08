@@ -154,6 +154,9 @@ struct TopView: View {
     }
 
     private func completeOnboarding() {
+        Task {
+            _ = await NotificationManager.shared.requestAuthorization()
+        }
         hasSeenOnboarding = true
         isLoggedIn = true
     }

@@ -13,7 +13,7 @@ struct AgaruUpApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
-            FavoriteVideo.self
+            FavoriteVideo.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -32,13 +32,8 @@ struct AgaruUpApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .task {
-                    // 初回起動時に通知許可をリクエスト
-                    _ = await NotificationManager.shared.requestAuthorization()
-                    
-                    // BLEスキャンを初期化（Bluetoothの許可ダイアログが表示される）
-                    BLECentralManager.shared.initialize()
-                }
+            // Permission requests deferred to specific user actions
+            // .task removed
         }
         .modelContainer(sharedModelContainer)
     }
