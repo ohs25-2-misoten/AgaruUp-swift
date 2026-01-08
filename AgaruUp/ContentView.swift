@@ -10,10 +10,13 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var isLoggedIn: Bool = false
+    @AppStorage("hasSeenOnboarding") var hasSeenOnboarding: Bool = false
+
     @State private var playbackManager = VideoPlaybackManager()
     private let dummyVideoURL = URL(
         string:
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4")!
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
+    )!
 
     var body: some View {
         if isLoggedIn {
@@ -29,6 +32,12 @@ struct ContentView: View {
                 }
         } else {
             TopView(isLoggedIn: $isLoggedIn)
+                .task {
+                    // オンボーディング完了済みなら自動的にログイン状態にする
+                    if hasSeenOnboarding {
+                        isLoggedIn = true
+                    }
+                }
         }
     }
 }
