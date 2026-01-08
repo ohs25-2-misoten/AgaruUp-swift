@@ -27,10 +27,16 @@ struct FeedCell: View {
     /// 動画のローディング状態（バッファリング中にスピナーを表示）
     @State private var isLoadingVideo = false
     
+    /// ループ再生時のアイコン表示状態
+    @State private var showLoopIcon = false
+    
     /// 再生アイコンを自動で非表示にするための非同期タスク
     /// タップ時に新しいタスクを開始し、前のタスクはキャンセルされる
     /// ビュー破棄時に適切にキャンセルしてリソースリークを防止
     @State private var playIconTask: Task<Void, Never>?
+    
+    /// ループアイコンを自動で非表示にするための非同期タスク
+    @State private var loopIconTask: Task<Void, Never>?
     
     /// プレイヤーのローディング状態を監視するタイマーの購読
     /// onAppearで開始し、onDisappearでキャンセルしてリソースリークを防止
@@ -61,9 +67,17 @@ struct FeedCell: View {
                         .foregroundColor(.white.opacity(0.7))
                         .transition(.scale.combined(with: .opacity))
                 }
+                
+                if showLoopIcon {
+                    Image(systemName: "backward.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.white.opacity(0.7))
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPaused)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showPlayIcon)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showLoopIcon)
 
             // ローディングスピナー
             if isLoadingVideo {
@@ -184,9 +198,19 @@ struct FeedCell: View {
                     for: .AVPlayerItemDidPlayToEndTime,
                     object: currentItem
                 )
-                .sink { _ in
+                .sink { [self] _ in
                     player.seek(to: .zero)
                     player.play()
+                    
+                    // ループアイコンを表示
+                    showLoopIcon = true
+                    loopIconTask?.cancel()
+                    loopIconTask = Task {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        if !Task.isCancelled {
+                            await MainActor.run { showLoopIcon = false }
+                        }
+                    }
                 }
             }
         }
@@ -194,6 +218,10 @@ struct FeedCell: View {
             // ビュー破棄時にTaskをキャンセル
             playIconTask?.cancel()
             playIconTask = nil
+            
+            // ループアイコンTaskをキャンセル
+            loopIconTask?.cancel()
+            loopIconTask = nil
             
             // タイマーの購読をキャンセル
             timerCancellable?.cancel()
