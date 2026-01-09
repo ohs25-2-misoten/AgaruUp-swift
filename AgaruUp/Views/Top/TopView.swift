@@ -26,7 +26,12 @@ struct TopView: View {
     private let timerPublisher = Timer.publish(every: 0.05, on: .main, in: .common)
 
     // プレースホルダー用の色（後で画像に置き換え）
-    private let colors: [Color] = [.brown, .brown, .orange, .orange]
+    private let colors: [Color] = [
+        Color.orange.opacity(0.4),
+        Color.orange.opacity(0.6),
+        Color.orange.opacity(0.8),
+        Color.orange
+    ]
     private let titles = ["Welcome to AgaruUp", "Discover", "Share", "Let's Begin!"]
     private let descriptions = [
         "アゲていくアプリへようこそ！",
