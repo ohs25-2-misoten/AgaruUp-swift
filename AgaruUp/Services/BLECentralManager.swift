@@ -15,6 +15,7 @@ struct DiscoveredDevice: Identifiable {
     let rssi: Int
     let distance: Double
     var lastSeenAt: Date
+    var peripheral: CBPeripheral?
 
     /// RSSIから距離を計算（メートル）
     /// measuredPower: 1メートル地点でのRSSI値（通常-59〜-65dBm）
@@ -42,8 +43,11 @@ final class BLECentralManager: NSObject {
     private let targetDeviceName = "hoso macho"
     /// ターゲットサービスUUID（バックグラウンドスキャンに必要）
     private let targetServiceUUID = CBUUID(string: "CC109F9E-A853-704E-149A-E1DB632AC72F")
+    /// デバイスUUID読み取り用のCharacteristic UUID
+    private let deviceUUIDCharacteristicUUID = CBUUID(
+        string: "ecf6c084-a579-42da-a7ff-f400fa4f4ae3")
     /// 検出距離の閾値（メートル）
-    private let distanceThreshold: Double = 10.0
+    private let distanceThreshold: Double = 5.0
 
     /// CoreBluetooth Central Manager
     private var centralManager: CBCentralManager!
@@ -53,6 +57,9 @@ final class BLECentralManager: NSObject {
 
     /// 検出された全デバイス
     var discoveredDevices: [UUID: DiscoveredDevice] = [:]
+
+    /// 発見したペリフェラルの参照を保持（接続用）
+    private var discoveredPeripherals: [UUID: CBPeripheral] = [:]
 
     /// 最も近いデバイス（互換性のために維持）
     var discoveredDevice: DiscoveredDevice? {
@@ -79,6 +86,15 @@ final class BLECentralManager: NSObject {
     /// スキャン中かどうか
     var isScanning: Bool = false
 
+    /// 接続中かどうか
+    var isConnecting: Bool = false
+
+    /// 接続済みペリフェラル
+    private var connectedPeripheral: CBPeripheral?
+
+    /// UUID読み取り完了ハンドラ
+    private var readDeviceUUIDCompletion: ((Result<String, Error>) -> Void)?
+
     /// BLEスキャンが有効かどうか（UserDefaultsで永続化）
     private static let isEnabledKey = "bleIsEnabled"
     var isEnabled: Bool = UserDefaults.standard.bool(forKey: isEnabledKey) {
@@ -91,6 +107,7 @@ final class BLECentralManager: NSObject {
             } else {
                 stopScanning()
                 discoveredDevices.removeAll()
+                discoveredPeripherals.removeAll()
             }
         }
     }
@@ -152,6 +169,66 @@ final class BLECentralManager: NSObject {
         centralManager.stopScan()
         isScanning = false
     }
+
+    // MARK: - デバイス接続とUUID読み取り
+
+    /// デバイスに接続してUUIDを読み取る
+    func connectAndReadDeviceUUID(deviceId: UUID) async throws -> String {
+        guard let peripheral = discoveredPeripherals[deviceId] else {
+            throw BLEError.deviceNotFound
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            self.readDeviceUUIDCompletion = { result in
+                continuation.resume(with: result)
+            }
+
+            isConnecting = true
+            peripheral.delegate = self
+            centralManager.connect(peripheral, options: nil)
+
+            // タイムアウト処理
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                guard let self = self, self.isConnecting else { return }
+                self.isConnecting = false
+                self.readDeviceUUIDCompletion?(.failure(BLEError.connectionTimeout))
+                self.readDeviceUUIDCompletion = nil
+                if let peripheral = self.connectedPeripheral {
+                    self.centralManager.cancelPeripheralConnection(peripheral)
+                }
+            }
+        }
+    }
+
+    /// 接続を解除
+    func disconnect() {
+        if let peripheral = connectedPeripheral {
+            centralManager.cancelPeripheralConnection(peripheral)
+            connectedPeripheral = nil
+        }
+        isConnecting = false
+    }
+}
+
+/// BLEエラー
+enum BLEError: LocalizedError {
+    case deviceNotFound
+    case connectionTimeout
+    case serviceNotFound
+    case characteristicNotFound
+    case readFailed
+    case invalidData
+
+    var errorDescription: String? {
+        switch self {
+        case .deviceNotFound: return "デバイスが見つかりません"
+        case .connectionTimeout: return "接続がタイムアウトしました"
+        case .serviceNotFound: return "サービスが見つかりません"
+        case .characteristicNotFound: return "Characteristicが見つかりません"
+        case .readFailed: return "データの読み取りに失敗しました"
+        case .invalidData: return "無効なデータです"
+        }
+    }
 }
 
 // MARK: - CBCentralManagerDelegate
@@ -199,8 +276,12 @@ extension BLECentralManager: CBCentralManagerDelegate {
             name: name,
             rssi: rssiValue,
             distance: distance,
-            lastSeenAt: Date()
+            lastSeenAt: Date(),
+            peripheral: peripheral
         )
+
+        // ペリフェラル参照を保持
+        discoveredPeripherals[peripheral.identifier] = peripheral
 
         // バックグラウンド時のみ通知を送信（初回発見またはタイムアウト後の再発見）
         let existingDevice = discoveredDevices[peripheral.identifier]
@@ -215,6 +296,30 @@ extension BLECentralManager: CBCentralManagerDelegate {
         discoveredDevices[peripheral.identifier] = device
     }
 
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        print("[BLE] Connected to \(peripheral.name ?? "unknown")")
+        connectedPeripheral = peripheral
+        // サービス発見を開始
+        peripheral.discoverServices([targetServiceUUID])
+    }
+
+    func centralManager(
+        _ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?
+    ) {
+        print("[BLE] Failed to connect: \(error?.localizedDescription ?? "unknown error")")
+        isConnecting = false
+        readDeviceUUIDCompletion?(.failure(error ?? BLEError.connectionTimeout))
+        readDeviceUUIDCompletion = nil
+    }
+
+    func centralManager(
+        _ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?
+    ) {
+        print("[BLE] Disconnected from \(peripheral.name ?? "unknown")")
+        connectedPeripheral = nil
+        isConnecting = false
+    }
+
     // MARK: - State Restoration
 
     func centralManager(
@@ -226,5 +331,89 @@ extension BLECentralManager: CBCentralManagerDelegate {
         if central.state == .poweredOn {
             startScanning()
         }
+    }
+}
+
+// MARK: - CBPeripheralDelegate
+
+extension BLECentralManager: CBPeripheralDelegate {
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        if let error = error {
+            print("[BLE] Service discovery error: \(error)")
+            readDeviceUUIDCompletion?(.failure(error))
+            readDeviceUUIDCompletion = nil
+            disconnect()
+            return
+        }
+
+        guard let services = peripheral.services,
+            let targetService = services.first(where: { $0.uuid == targetServiceUUID })
+        else {
+            print("[BLE] Target service not found")
+            readDeviceUUIDCompletion?(.failure(BLEError.serviceNotFound))
+            readDeviceUUIDCompletion = nil
+            disconnect()
+            return
+        }
+
+        print("[BLE] Found service: \(targetService.uuid)")
+        peripheral.discoverCharacteristics([deviceUUIDCharacteristicUUID], for: targetService)
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?
+    ) {
+        if let error = error {
+            print("[BLE] Characteristic discovery error: \(error)")
+            readDeviceUUIDCompletion?(.failure(error))
+            readDeviceUUIDCompletion = nil
+            disconnect()
+            return
+        }
+
+        guard let characteristics = service.characteristics,
+            let targetCharacteristic = characteristics.first(where: {
+                $0.uuid == deviceUUIDCharacteristicUUID
+            })
+        else {
+            print("[BLE] Target characteristic not found")
+            readDeviceUUIDCompletion?(.failure(BLEError.characteristicNotFound))
+            readDeviceUUIDCompletion = nil
+            disconnect()
+            return
+        }
+
+        print("[BLE] Found characteristic: \(targetCharacteristic.uuid)")
+        peripheral.readValue(for: targetCharacteristic)
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        defer {
+            disconnect()
+        }
+
+        if let error = error {
+            print("[BLE] Read value error: \(error)")
+            readDeviceUUIDCompletion?(.failure(error))
+            readDeviceUUIDCompletion = nil
+            return
+        }
+
+        guard let data = characteristic.value,
+            let uuidString = String(data: data, encoding: .utf8)
+        else {
+            print("[BLE] Invalid data")
+            readDeviceUUIDCompletion?(.failure(BLEError.invalidData))
+            readDeviceUUIDCompletion = nil
+            return
+        }
+
+        print("[BLE] Read device UUID: \(uuidString)")
+        isConnecting = false
+        readDeviceUUIDCompletion?(.success(uuidString))
+        readDeviceUUIDCompletion = nil
     }
 }

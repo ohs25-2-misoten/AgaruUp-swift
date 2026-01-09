@@ -247,8 +247,23 @@ struct ProgressIndicator: View {
             return
         }
 
+        // デバイスに接続してCharacteristicからUUIDを読み取る
+        let deviceUUID: String
+        do {
+            deviceUUID = try await bleManager.connectAndReadDeviceUUID(deviceId: device.id)
+        } catch {
+            await MainActor.run {
+                isSuccess = false
+                alertTitle = "接続エラー 😢"
+                alertMessage = error.localizedDescription
+                showAlert = true
+                isCompleted = false
+            }
+            isReporting = false
+            return
+        }
+
         // デバイスUUIDからエンドポイントを構築
-        let deviceUUID = device.id.uuidString.lowercased()
         let baseURL = "https://\(deviceUUID).easy-hacking.com"
 
         do {
