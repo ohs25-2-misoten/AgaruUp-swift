@@ -24,7 +24,7 @@ struct ProgressIndicator: View {
     @State private var showEnableBLEAlert: Bool = false
 
     /// BLEセントラルマネージャー
-    private var bleManager = BLECentralManager.shared
+    @Bindable private var bleManager = BLECentralManager.shared
 
     private let stepAmount: Double = 0.1
     private let backgroundColor = Color.gray.opacity(0.3)

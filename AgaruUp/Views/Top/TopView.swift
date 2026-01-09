@@ -22,7 +22,8 @@ struct TopView: View {
     // タイマー設定
     private let pageDuration: TimeInterval = 10.0  // 1ページあたりの表示時間（秒）
     private let timerInterval: TimeInterval = 0.05  // 更新間隔（秒）
-    private let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
+    @State private var timerCancellable: AnyCancellable?
+    private let timerPublisher = Timer.publish(every: 0.05, on: .main, in: .common)
 
     // プレースホルダー用の色（後で画像に置き換え）
     private let colors: [Color] = [.brown, .brown, .orange, .orange]
@@ -116,18 +117,26 @@ struct TopView: View {
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         }
-        .onReceive(timer) { _ in
-            // 最後のページ、または既読ページでは自動遷移しない
-            guard currentPage < totalPages - 1 else { return }
-            guard currentPage == maxSeenPage else { return }
+        .onAppear {
+            // タイマーを開始
+            timerCancellable = timerPublisher.autoconnect().sink { _ in
+                // 最後のページ、または既読ページでは自動遷移しない
+                guard currentPage < totalPages - 1 else { return }
+                guard currentPage == maxSeenPage else { return }
 
-            if progress < 1.0 {
-                withAnimation(.linear(duration: timerInterval)) {
-                    progress += CGFloat(timerInterval / pageDuration)
+                if progress < 1.0 {
+                    withAnimation(.linear(duration: timerInterval)) {
+                        progress += CGFloat(timerInterval / pageDuration)
+                    }
+                } else {
+                    goToNextPage()
                 }
-            } else {
-                goToNextPage()
             }
+        }
+        .onDisappear {
+            // タイマーをキャンセル（メモリリーク防止）
+            timerCancellable?.cancel()
+            timerCancellable = nil
         }
         .onChange(of: currentPage) { _, newValue in
             // ステート更新がページ遷移アニメーションと干渉しないようにアニメーションを無効化する
