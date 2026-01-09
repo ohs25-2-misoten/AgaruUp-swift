@@ -108,6 +108,9 @@ struct TopView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 50)
+                        .accessibilityLabel(index == totalPages - 1 ? "完了して始める" : "次のページへ")
+                        .accessibilityHint("ダブルタップして進みます")
+                        .accessibilityValue("\(index + 1)ページ目、全\(totalPages)ページ")
 
                         Spacer()
                     }
