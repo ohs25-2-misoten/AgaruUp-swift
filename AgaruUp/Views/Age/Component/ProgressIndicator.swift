@@ -150,7 +150,7 @@ struct ProgressIndicator: View {
                         || (bleManager.isEnabled && !bleManager.isDeviceFound))
 
                 // BLEスキャン オン/オフ トグル
-                Toggle(isOn: Bindable(bleManager).isEnabled) {
+                Toggle(isOn: $bleManager.isEnabled) {
                     HStack {
                         Image(
                             systemName: bleManager.isEnabled
