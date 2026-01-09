@@ -449,8 +449,23 @@ extension BLECentralManager: CBPeripheralDelegate {
         }
 
         guard let data = characteristic.value,
-            let rawUuidString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-            let deviceUUID = UUID(uuidString: rawUuidString.lowercased())
+            let rawUuidString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        else {
+            print("[BLE] Invalid data format")
+            readDeviceUUIDCompletion?(.failure(BLEError.invalidData))
+            readDeviceUUIDCompletion = nil
+            return
+        }
+
+        // 文字列長チェック（セキュリティ対策）
+        if rawUuidString.count > 100 {
+            print("[BLE] Received data is too long: \(rawUuidString.count) characters")
+            readDeviceUUIDCompletion?(.failure(BLEError.invalidData))
+            readDeviceUUIDCompletion = nil
+            return
+        }
+
+        guard let deviceUUID = UUID(uuidString: rawUuidString.lowercased())
         else {
             print("[BLE] Invalid data or UUID format")
             readDeviceUUIDCompletion?(.failure(BLEError.invalidData))
