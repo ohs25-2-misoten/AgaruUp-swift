@@ -20,7 +20,7 @@ struct DiscoveredDevice: Identifiable {
     /// RSSIから距離を計算（メートル）
     /// measuredPower: 1メートル地点でのRSSI値（通常-59〜-65dBm）
     /// n: 環境係数（2.0〜4.0、屋内では2.0〜3.0が一般的）
-    static func calculateDistance(rssi: Int, measuredPower: Int = -60, n: Double = 3.0) -> Double {
+    static func calculateDistance(rssi: Int, measuredPower: Int = -70, n: Double = 3.0) -> Double {
         if rssi == 0 {
             return -1.0
         }
@@ -40,9 +40,9 @@ final class BLECentralManager: NSObject {
     static let shared = BLECentralManager()
 
     /// ターゲットデバイス名
-    private let targetDeviceName = "hoso macho"
+    private let targetDeviceName = "agaru-up-camera"
     /// ターゲットサービスUUID（バックグラウンドスキャンに必要）
-    private let targetServiceUUID = CBUUID(string: "CC109F9E-A853-704E-149A-E1DB632AC72F")
+    private let targetServiceUUID = CBUUID(string: "5c339364-c7be-4f23-b666-a8ff73a6a86a")
     /// デバイスUUID読み取り用のCharacteristic UUID
     private let deviceUUIDCharacteristicUUID = CBUUID(
         string: "ecf6c084-a579-42da-a7ff-f400fa4f4ae3")
@@ -53,13 +53,38 @@ final class BLECentralManager: NSObject {
     private var centralManager: CBCentralManager!
 
     /// デバイスが見えなくなったとみなすタイムアウト（秒）
-    private let deviceTimeout: TimeInterval = 5.0
+    private let deviceTimeout: TimeInterval = 60.0
 
-    /// 検出された全デバイス
+    /// 検出された全デバイス（キー：Characteristicから取得したデバイスUUID）
     var discoveredDevices: [UUID: DiscoveredDevice] = [:]
 
     /// 発見したペリフェラルの参照を保持（接続用）
     private var discoveredPeripherals: [UUID: CBPeripheral] = [:]
+
+    /// ペリフェラルIDとデバイスUUIDのマッピング
+    private var peripheralToDeviceUUID: [UUID: UUID] = [:]
+
+    /// 接続待ちのペリフェラル情報（ペリフェラルID → 検出情報）
+    private struct PendingPeripheralInfo {
+        let name: String
+        let rssi: Int
+        let distance: Double
+        let peripheral: CBPeripheral
+    }
+    private var pendingPeripherals: [UUID: PendingPeripheralInfo] = [:]
+
+    /// 検出した未対応デバイス情報（デバッグ表示用、UUIDで重複排除）
+    struct ScannedPeripheralInfo: Identifiable {
+        let id: UUID
+        let name: String?
+        let discoveredAt: Date
+    }
+    var scannedPeripherals: [UUID: ScannedPeripheralInfo] = [:]
+
+    /// スキャンされたペリフェラルのリスト（古い順＝下に新しいものが追加されていく）
+    var scannedPeripheralList: [ScannedPeripheralInfo] {
+        scannedPeripherals.values.sorted { $0.discoveredAt < $1.discoveredAt }
+    }
 
     /// 最も近いデバイス（互換性のために維持）
     var discoveredDevice: DiscoveredDevice? {
@@ -108,6 +133,9 @@ final class BLECentralManager: NSObject {
                 stopScanning()
                 discoveredDevices.removeAll()
                 discoveredPeripherals.removeAll()
+                peripheralToDeviceUUID.removeAll()
+                pendingPeripherals.removeAll()
+                scannedPeripherals.removeAll()
             }
         }
     }
@@ -123,11 +151,10 @@ final class BLECentralManager: NSObject {
     func initialize() {
         guard centralManager == nil else { return }
 
-        // バックグラウンドでのスキャンを有効化
+        // フォアグラウンドでのみスキャン
         centralManager = CBCentralManager(
             delegate: self,
-            queue: nil,
-            options: [CBCentralManagerOptionRestoreIdentifierKey: "com.agaruup.ble.central"]
+            queue: nil
         )
     }
 
@@ -151,10 +178,11 @@ final class BLECentralManager: NSObject {
         print("[BLE] Starting scan for \(targetDeviceName)")
         isScanning = true
 
-        // サービスUUIDを指定してバックグラウンドスキャンを有効化
+        // フォアグラウンドでのみスキャン（サービスUUID指定なしで全件検索）
+        // 機器名でフィルタリングするため、全てのペリフェラルをスキャン
         // 距離をリアルタイム更新するため重複検出を有効化
         centralManager.scanForPeripherals(
-            withServices: [targetServiceUUID],
+            withServices: nil,
             options: [
                 CBCentralManagerScanOptionAllowDuplicatesKey: true
             ]
@@ -265,35 +293,62 @@ extension BLECentralManager: CBCentralManagerDelegate {
     ) {
         // デバイス名でフィルタリング
         guard let name = peripheral.name, name == targetDeviceName else {
+            // ターゲット以外のデバイスを検出した場合はリストに追加（デバッグ表示用、UUID重複排除）
+            // 既に登録済みの場合は追加順を維持するため更新しない
+            if scannedPeripherals[peripheral.identifier] == nil {
+                scannedPeripherals[peripheral.identifier] = ScannedPeripheralInfo(
+                    id: peripheral.identifier,
+                    name: peripheral.name,
+                    discoveredAt: Date()
+                )
+            }
             return
         }
 
         let rssiValue = RSSI.intValue
         let distance = DiscoveredDevice.calculateDistance(rssi: rssiValue)
 
-        let device = DiscoveredDevice(
-            id: peripheral.identifier,
-            name: name,
-            rssi: rssiValue,
-            distance: distance,
-            lastSeenAt: Date(),
-            peripheral: peripheral
-        )
+        // 既にこのペリフェラルのデバイスUUIDを取得済みの場合は更新のみ
+        if let deviceUUID = peripheralToDeviceUUID[peripheral.identifier] {
+            // 既存デバイスの情報を更新
+            if var existingDevice = discoveredDevices[deviceUUID] {
+                existingDevice.lastSeenAt = Date()
+                discoveredDevices[deviceUUID] = DiscoveredDevice(
+                    id: deviceUUID,
+                    name: name,
+                    rssi: rssiValue,
+                    distance: distance,
+                    lastSeenAt: Date(),
+                    peripheral: peripheral
+                )
+            }
+            return
+        }
+
+        // 既に接続待ちまたは接続中の場合はスキップ
+        if pendingPeripherals[peripheral.identifier] != nil || isConnecting {
+            return
+        }
+
+        // デバッグ用：ターゲットデバイス発見時のみログ出力
+        print("[BLE] ✅ ターゲットデバイス発見: \(name) (ペリフェラルID: \(peripheral.identifier), RSSI: \(RSSI.intValue)dBm)")
+        print("[BLE] 🔗 Characteristicから機器UUIDを取得するため接続開始...")
 
         // ペリフェラル参照を保持
         discoveredPeripherals[peripheral.identifier] = peripheral
 
-        // バックグラウンド時のみ通知を送信（初回発見またはタイムアウト後の再発見）
-        let existingDevice = discoveredDevices[peripheral.identifier]
-        let isNewOrRediscovered =
-            existingDevice == nil
-            || Date().timeIntervalSince(existingDevice!.lastSeenAt) >= deviceTimeout
-        if isNewOrRediscovered {
-            NotificationManager.shared.sendDeviceFoundNotification(deviceName: name)
-        }
+        // 接続待ち情報を保存
+        pendingPeripherals[peripheral.identifier] = PendingPeripheralInfo(
+            name: name,
+            rssi: rssiValue,
+            distance: distance,
+            peripheral: peripheral
+        )
 
-        // デバイス情報を更新
-        discoveredDevices[peripheral.identifier] = device
+        // 自動接続してCharacteristicの値を読み取る
+        isConnecting = true
+        peripheral.delegate = self
+        centralManager.connect(peripheral, options: nil)
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
@@ -307,6 +362,7 @@ extension BLECentralManager: CBCentralManagerDelegate {
         _ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?
     ) {
         print("[BLE] Failed to connect: \(error?.localizedDescription ?? "unknown error")")
+        pendingPeripherals.removeValue(forKey: peripheral.identifier)
         isConnecting = false
         readDeviceUUIDCompletion?(.failure(error ?? BLEError.connectionTimeout))
         readDeviceUUIDCompletion = nil
@@ -316,21 +372,9 @@ extension BLECentralManager: CBCentralManagerDelegate {
         _ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?
     ) {
         print("[BLE] Disconnected from \(peripheral.name ?? "unknown")")
+        pendingPeripherals.removeValue(forKey: peripheral.identifier)
         connectedPeripheral = nil
         isConnecting = false
-    }
-
-    // MARK: - State Restoration
-
-    func centralManager(
-        _ central: CBCentralManager,
-        willRestoreState dict: [String: Any]
-    ) {
-        print("[BLE] Restoring state")
-        // バックグラウンドから復帰時にスキャンを再開
-        if central.state == .poweredOn {
-            startScanning()
-        }
     }
 }
 
@@ -393,6 +437,8 @@ extension BLECentralManager: CBPeripheralDelegate {
     ) {
         defer {
             disconnect()
+            // pendingPeripheralsから削除
+            pendingPeripherals.removeValue(forKey: peripheral.identifier)
         }
 
         if let error = error {
@@ -403,17 +449,42 @@ extension BLECentralManager: CBPeripheralDelegate {
         }
 
         guard let data = characteristic.value,
-            let uuidString = String(data: data, encoding: .utf8)
+            let rawUuidString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+            let deviceUUID = UUID(uuidString: rawUuidString.lowercased())
         else {
-            print("[BLE] Invalid data")
+            print("[BLE] Invalid data or UUID format")
             readDeviceUUIDCompletion?(.failure(BLEError.invalidData))
             readDeviceUUIDCompletion = nil
             return
         }
 
-        print("[BLE] Read device UUID: \(uuidString)")
+        print("[BLE] ✅ 機器UUID取得成功: \(deviceUUID)")
+
+        // ペリフェラルIDとデバイスUUIDのマッピングを保存
+        peripheralToDeviceUUID[peripheral.identifier] = deviceUUID
+
+        // pendingPeripheralsから情報を取得してDiscoveredDeviceを作成
+        if let pendingInfo = pendingPeripherals[peripheral.identifier] {
+            let device = DiscoveredDevice(
+                id: deviceUUID,
+                name: pendingInfo.name,
+                rssi: pendingInfo.rssi,
+                distance: pendingInfo.distance,
+                lastSeenAt: Date(),
+                peripheral: pendingInfo.peripheral
+            )
+
+            // デバイス情報を更新
+            discoveredDevices[deviceUUID] = device
+
+            // 通知を送信
+            NotificationManager.shared.sendDeviceFoundNotification(deviceName: pendingInfo.name)
+
+            print("[BLE] 📱 デバイス登録完了: \(pendingInfo.name) (UUID: \(deviceUUID))")
+        }
+
         isConnecting = false
-        readDeviceUUIDCompletion?(.success(uuidString))
+        readDeviceUUIDCompletion?(.success(rawUuidString))
         readDeviceUUIDCompletion = nil
     }
 }

@@ -20,6 +20,9 @@ struct ProgressIndicator: View {
     @State private var alertMessage: String = ""
     @State private var isSuccess: Bool = false
 
+    // BLE有効化確認ダイアログ用のState
+    @State private var showEnableBLEAlert: Bool = false
+
     /// BLEセントラルマネージャー
     private var bleManager = BLECentralManager.shared
 
@@ -90,9 +93,11 @@ struct ProgressIndicator: View {
                 .frame(maxWidth: 300)
                 .animation(.easeInOut(duration: 0.5), value: progress)
 
+                // アゲボタン
                 Button(action: {
                     if !bleManager.isEnabled {
-                        bleManager.isEnabled = true
+                        // BLE無効時はダイアログを表示
+                        showEnableBLEAlert = true
                     } else {
                         incrementProgress()
                     }
@@ -108,7 +113,17 @@ struct ProgressIndicator: View {
                             ProgressView()
                                 .scaleEffect(2)
                                 .tint(.white)
-                        } else if bleManager.isEnabled && !bleManager.isDeviceFound {
+                        } else if !bleManager.isEnabled {
+                            // BLE無効時は無効表示
+                            VStack(spacing: 8) {
+                                Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white.opacity(0.8))
+                                Text("カメラ検出が無効")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                        } else if !bleManager.isDeviceFound {
                             // 検索中はロード表示
                             VStack(spacing: 8) {
                                 ProgressView()
@@ -119,7 +134,7 @@ struct ProgressIndicator: View {
                                     .foregroundColor(.white.opacity(0.8))
                             }
                         } else {
-                            Text(isCompleted ? "🎉" : (bleManager.isEnabled ? "アガる" : "ONにする"))
+                            Text(isCompleted ? "🎉" : "アガる")
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
@@ -162,6 +177,62 @@ struct ProgressIndicator: View {
                     }
                     .padding(.top, 8)
                 }
+
+                // 検出した未対応デバイスリスト（上がフェードアウト、下からふわっと表示）
+                if bleManager.isEnabled && !bleManager.scannedPeripheralList.isEmpty {
+                    VStack(alignment: .center, spacing: 4) {
+                        Text("検出中のデバイス")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        ScrollViewReader { proxy in
+                            ScrollView(showsIndicators: false) {
+                                VStack(alignment: .center, spacing: 4) {
+                                    ForEach(bleManager.scannedPeripheralList) { peripheral in
+                                        HStack {
+                                            Text(peripheral.name ?? "名前なし")
+                                                .font(.caption2)
+                                                .foregroundColor(.primary)
+														 Text(peripheral.id.uuidString.prefix(16) + "...")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .id(peripheral.id)
+                                        .transition(.asymmetric(
+                                            insertion: .scale(scale: 0.8).combined(with: .opacity),
+                                            removal: .opacity
+                                        ))
+                                    }
+                                }
+                                .animation(.easeOut(duration: 0.3), value: bleManager.scannedPeripheralList.count)
+                            }
+                            .frame(height: 60)
+                            // 上がグラデーションで透明になるマスク
+                            .mask(
+                                LinearGradient(
+                                    colors: [
+                                        .clear,
+                                        .black.opacity(0.3),
+                                        .black,
+                                        .black,
+													 .black.opacity(0.5)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .onChange(of: bleManager.scannedPeripheralList.count) { _, _ in
+                                // 新しいアイテムが追加されたら一番下にスクロール
+                                if let lastItem = bleManager.scannedPeripheralList.last {
+                                    withAnimation(.easeOut(duration: 0.3)) {
+                                        proxy.scrollTo(lastItem.id, anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: 280)
+                    .padding(.top, 8)
+                }
             }
             .padding()
 
@@ -180,6 +251,14 @@ struct ProgressIndicator: View {
             }
         } message: {
             Text(alertMessage)
+        }
+        .alert("カメラ検出を有効にしますか？", isPresented: $showEnableBLEAlert) {
+            Button("有効にする") {
+                bleManager.isEnabled = true
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("アゲ報告をするには、近くのカメラを検出する必要があります。")
         }
         .onAppear {
             // 画面表示時にBluetooth許可をリクエスト（初期化のみ、自動ONはしない）
@@ -247,58 +326,26 @@ struct ProgressIndicator: View {
             return
         }
 
-        // デバイスに接続してCharacteristicからUUIDを読み取る
-        let deviceUUID: String
-        do {
-            deviceUUID = try await bleManager.connectAndReadDeviceUUID(deviceId: device.id)
-        } catch {
-            await MainActor.run {
-                isSuccess = false
-                alertTitle = "接続エラー 😢"
-                alertMessage = error.localizedDescription
-                showAlert = true
-                isCompleted = false
-            }
-            isReporting = false
-            return
-        }
-
-        // デバイスUUIDからエンドポイントを構築
-        let baseURL = "https://\(deviceUUID).easy-hacking.com"
+        // あらかじめ取得済みのデバイスUUIDをlocationIdとして使用
+        let deviceLocationId = device.id.uuidString.lowercased()
 
         do {
-            guard let url = URL(string: "\(baseURL)/report") else {
-                throw URLError(.badURL)
-            }
-
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let body = ReportRequest(user: userId, location: locationId)
-            request.httpBody = try JSONEncoder().encode(body)
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw URLError(.badServerResponse)
-            }
+            let response = try await ReportService.shared.report(
+                userId: userId,
+                locationId: deviceLocationId
+            )
 
             print("===== アゲ報告完了 =====")
-            print("Endpoint: \(baseURL)/report")
-            print("Status Code: \(httpResponse.statusCode)")
-            print("Response: \(String(data: data, encoding: .utf8) ?? "nil")")
+            print("User ID: \(userId)")
+            print("Location ID (Device UUID): \(deviceLocationId)")
+            print("Response: \(String(describing: response))")
             print("========================")
 
-            if httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
-                await MainActor.run {
-                    isSuccess = true
-                    alertTitle = "成功 🎉"
-                    alertMessage = "アゲ報告が完了しました！"
-                    showAlert = true
-                }
-            } else {
-                throw URLError(.badServerResponse)
+            await MainActor.run {
+                isSuccess = true
+                alertTitle = "成功 🎉"
+                alertMessage = "アゲ報告が完了しました！"
+                showAlert = true
             }
         } catch {
             print("===== アゲ報告失敗 =====")
