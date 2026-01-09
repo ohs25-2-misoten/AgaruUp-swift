@@ -9,7 +9,7 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isLoggedIn: Bool = false
+    @State private var isLoggedIn: Bool = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
     @AppStorage("hasSeenOnboarding") var hasSeenOnboarding: Bool = false
 
     @State private var playbackManager = VideoPlaybackManager()
@@ -32,12 +32,6 @@ struct ContentView: View {
                 }
         } else {
             TopView(isLoggedIn: $isLoggedIn)
-                .task {
-                    // オンボーディング完了済みなら自動的にログイン状態にする
-                    if hasSeenOnboarding {
-                        isLoggedIn = true
-                    }
-                }
         }
     }
 }
