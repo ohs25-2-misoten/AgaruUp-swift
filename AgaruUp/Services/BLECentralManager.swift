@@ -20,16 +20,16 @@ struct DiscoveredDevice: Identifiable {
     /// RSSIから距離を計算（メートル）
     /// measuredPower: 1メートル地点でのRSSI値（通常-59〜-65dBm）
     /// n: 環境係数（2.0〜4.0、屋内では2.0〜3.0が一般的）
+    ///
+    /// 標準的なBLE距離計算公式: d = 10^((measuredPower - rssi) / (10 * n))
     static func calculateDistance(rssi: Int, measuredPower: Int = -70, n: Double = 3.0) -> Double {
         if rssi == 0 {
             return -1.0
         }
-        let ratio = Double(rssi) / Double(measuredPower)
-        if ratio < 1.0 {
-            return pow(ratio, 10)
-        } else {
-            return 0.89976 * pow(ratio, 7.7095) + 0.111
-        }
+        // 標準的なBLE距離計算公式を使用
+        // d = 10^((measuredPower - rssi) / (10 * n))
+        let exponent = Double(measuredPower - rssi) / (10.0 * n)
+        return pow(10.0, exponent)
     }
 }
 
