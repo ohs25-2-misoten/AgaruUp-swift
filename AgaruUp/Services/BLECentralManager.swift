@@ -14,11 +14,12 @@ struct DiscoveredDevice: Identifiable {
     let name: String
     let rssi: Int
     let distance: Double
+    var lastSeenAt: Date
 
     /// RSSIから距離を計算（メートル）
     /// measuredPower: 1メートル地点でのRSSI値（通常-59〜-65dBm）
     /// n: 環境係数（2.0〜4.0、屋内では2.0〜3.0が一般的）
-    static func calculateDistance(rssi: Int, measuredPower: Int = -59, n: Double = 2.0) -> Double {
+    static func calculateDistance(rssi: Int, measuredPower: Int = -60, n: Double = 3.0) -> Double {
         if rssi == 0 {
             return -1.0
         }
@@ -38,19 +39,40 @@ final class BLECentralManager: NSObject {
     static let shared = BLECentralManager()
 
     /// ターゲットデバイス名
-    private let targetDeviceName = "agaru-up-camera"
+    private let targetDeviceName = "hoso macho"
+    /// ターゲットサービスUUID（バックグラウンドスキャンに必要）
+    private let targetServiceUUID = CBUUID(string: "CC109F9E-A853-704E-149A-E1DB632AC72F")
     /// 検出距離の閾値（メートル）
     private let distanceThreshold: Double = 10.0
 
     /// CoreBluetooth Central Manager
     private var centralManager: CBCentralManager!
 
-    /// 検出されたデバイス
-    var discoveredDevice: DiscoveredDevice?
+    /// デバイスが見えなくなったとみなすタイムアウト（秒）
+    private let deviceTimeout: TimeInterval = 5.0
+
+    /// 検出された全デバイス
+    var discoveredDevices: [UUID: DiscoveredDevice] = [:]
+
+    /// 最も近いデバイス（互換性のために維持）
+    var discoveredDevice: DiscoveredDevice? {
+        nearestDevice
+    }
+
+    /// 最も近いデバイスを取得
+    var nearestDevice: DiscoveredDevice? {
+        let now = Date()
+        // タイムアウトしていないデバイスのみフィルタリング
+        let activeDevices = discoveredDevices.values.filter { device in
+            now.timeIntervalSince(device.lastSeenAt) < deviceTimeout
+        }
+        // 距離が最も近いものを返す
+        return activeDevices.min { $0.distance < $1.distance }
+    }
 
     /// デバイスが見つかったかどうか
     var isDeviceFound: Bool {
-        guard let device = discoveredDevice else { return false }
+        guard let device = nearestDevice else { return false }
         return device.distance <= distanceThreshold
     }
 
@@ -68,7 +90,7 @@ final class BLECentralManager: NSObject {
                 }
             } else {
                 stopScanning()
-                discoveredDevice = nil
+                discoveredDevices.removeAll()
             }
         }
     }
@@ -112,10 +134,10 @@ final class BLECentralManager: NSObject {
         print("[BLE] Starting scan for \(targetDeviceName)")
         isScanning = true
 
-        // バッテリー消費を抑えるため、重複検出を無効化
-        // ただし、距離をリアルタイム更新するため有効化
+        // サービスUUIDを指定してバックグラウンドスキャンを有効化
+        // 距離をリアルタイム更新するため重複検出を有効化
         centralManager.scanForPeripherals(
-            withServices: nil,
+            withServices: [targetServiceUUID],
             options: [
                 CBCentralManagerScanOptionAllowDuplicatesKey: true
             ]
@@ -176,21 +198,21 @@ extension BLECentralManager: CBCentralManagerDelegate {
             id: peripheral.identifier,
             name: name,
             rssi: rssiValue,
-            distance: distance
+            distance: distance,
+            lastSeenAt: Date()
         )
 
-        print(
-            "[BLE] Found \(name): RSSI=\(rssiValue)dBm, Distance=\(String(format: "%.2f", distance))m"
-        )
-
-        // バックグラウンド時のみ通知を送信
-        let wasNotFound = discoveredDevice == nil
-        if wasNotFound {
+        // バックグラウンド時のみ通知を送信（初回発見またはタイムアウト後の再発見）
+        let existingDevice = discoveredDevices[peripheral.identifier]
+        let isNewOrRediscovered =
+            existingDevice == nil
+            || Date().timeIntervalSince(existingDevice!.lastSeenAt) >= deviceTimeout
+        if isNewOrRediscovered {
             NotificationManager.shared.sendDeviceFoundNotification(deviceName: name)
         }
 
         // デバイス情報を更新
-        discoveredDevice = device
+        discoveredDevices[peripheral.identifier] = device
     }
 
     // MARK: - State Restoration
