@@ -104,7 +104,7 @@ struct FeedCell: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(video.title)
                             .font(.headline)
-                            .lineLimit(showDetails ? nil : 3)
+                            .lineLimit(showDetails ? nil : 2)
                         
                         if showDetails {
                             // タグ表示（タグがある場合のみ）
@@ -169,7 +169,7 @@ struct FeedCell: View {
                             Image(systemName: "ellipsis.bubble.fill")
                                 .resizable()
                                 .frame(width: 20, height: 20)
-										  .foregroundStyle(.gray)
+								  .foregroundStyle(.gray)
                         }
                         .frame(minWidth: 44, minHeight: 44)
                         .background(
@@ -181,7 +181,7 @@ struct FeedCell: View {
                             onPress: { commentPressed = true },
                             onRelease: { commentPressed = false }
                         )
-								.disabled(true)
+					.disabled(true)
                     }
                 }
                 .padding(.bottom, 80)
