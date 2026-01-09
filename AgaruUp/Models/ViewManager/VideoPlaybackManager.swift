@@ -53,8 +53,9 @@ final class VideoPlaybackManager {
         currentVideoUrl = urlString
 
         // 保存された進捗を無視して常に最初から再生
-        player.seek(to: .zero)
-        player.play()
+        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+            self?.player.play()
+        }
     }
 
 

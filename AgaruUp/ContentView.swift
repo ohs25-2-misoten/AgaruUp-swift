@@ -9,11 +9,14 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isLoggedIn: Bool = false
+    @State private var isLoggedIn: Bool = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
+    @AppStorage("hasSeenOnboarding") var hasSeenOnboarding: Bool = false
+
     @State private var playbackManager = VideoPlaybackManager()
     private let dummyVideoURL = URL(
         string:
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4")!
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
+    )!
 
     var body: some View {
         if isLoggedIn {

@@ -13,7 +13,7 @@ struct AgaruUpApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
-            FavoriteVideo.self
+            FavoriteVideo.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -32,6 +32,8 @@ struct AgaruUpApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+            // Permission requests deferred to specific user actions
+            // .task removed
         }
         .modelContainer(sharedModelContainer)
     }

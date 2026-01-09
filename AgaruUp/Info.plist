@@ -4,11 +4,17 @@
 <dict>
 	<key>APIConfiguration</key>
 	<string>$(CONFIGURATION)</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>近くのカメラを検出してアゲ報告を行うために使用します</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>近くのカメラを検出してアゲ報告を行うために使用します</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>bluetooth-central</string>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
 </plist>
+
