@@ -250,8 +250,12 @@ struct FeedCell: View {
                         object: item
                     )
                     .sink { [self] _ in
-                        player.seek(to: .zero)
-                        player.play()
+                        // ループ再生：シーク完了後に再生開始
+                        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak player] finished in
+                            if finished {
+                                player?.play()
+                            }
+                        }
                         
                         // ループアイコンを表示
                         showLoopIcon = true
