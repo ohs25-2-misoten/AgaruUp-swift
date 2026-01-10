@@ -123,7 +123,7 @@ struct FavoriteView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isShowingSearch) {
-                SearchView()
+                SearchView(playbackManager: playbackManager)
             }
             .task {
                 await viewModel.loadFavoriteVideos()

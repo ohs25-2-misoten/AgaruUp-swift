@@ -12,7 +12,12 @@ struct SearchView: View {
     @State private var tags: [String] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-
+    
+    /// 検索結果への遷移用
+    @State private var searchNavigation: SearchNavigation?
+    
+    @Bindable var playbackManager: VideoPlaybackManager
+    
     private let tagService = TagService.shared
 
     var body: some View {
@@ -36,32 +41,49 @@ struct SearchView: View {
                         .padding()
                     }
                 } else {
-                    FlowLayout(alignment: .center, spacing: 10) {
-                        ForEach(filteredTags, id: \.self) { tag in
-                            Text("#\(tag)")
-                                .padding(.vertical, 5)
-                                .padding(.horizontal, 12)
-                                .background(Color(.systemGroupedBackground))
-                                .cornerRadius(15)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            if !tags.isEmpty {
+                                Text("人気のタグ")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                FlowLayout(alignment: .leading, spacing: 10) {
+                                    ForEach(filteredTags, id: \.self) { tag in
+                                        TagButton(tag: tag) {
+                                            searchNavigation = .tag(tag)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
                         }
+                        .padding(.vertical)
                     }
-                }
-
-                Spacer()
-                
-                if !searchText.isEmpty {
-                    Button(action: handleSearch) {
-                        Text("「\(searchText)」で検索")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .controlSize(.extraLarge)
                 }
             }
-            .padding()
             .navigationTitle("検索")
+            .navigationDestination(item: $searchNavigation) { navigation in
+                switch navigation {
+                case .query(let query):
+                    SearchResultsView(
+                        query: query,
+                        tag: nil,
+                        playbackManager: playbackManager
+                    )
+                case .tag(let tag):
+                    SearchResultsView(
+                        query: nil,
+                        tag: tag,
+                        playbackManager: playbackManager
+                    )
+                }
+            }
         }
         .searchable(text: $searchText, prompt: "動画を検索")
+        .onSubmit(of: .search) {
+            handleSearch()
+        }
         .task {
             await loadTags()
         }
@@ -76,7 +98,8 @@ struct SearchView: View {
     }
 
     private func handleSearch() {
-        // TODO: 検索と統合
+        guard !searchText.isEmpty else { return }
+        searchNavigation = .query(searchText)
     }
 
     private func loadTags() async {
@@ -93,6 +116,42 @@ struct SearchView: View {
     }
 }
 
+// MARK: - SearchNavigation
+
+/// 検索ナビゲーションの種類
+enum SearchNavigation: Hashable, Identifiable {
+    case query(String)
+    case tag(String)
+    
+    var id: String {
+        switch self {
+        case .query(let q): return "query:\(q)"
+        case .tag(let t): return "tag:\(t)"
+        }
+    }
+}
+
+// MARK: - TagButton
+
+/// タグボタン
+struct TagButton: View {
+    let tag: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text("#\(tag)")
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 14)
+                .background(Color(.systemGroupedBackground))
+                .cornerRadius(18)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 #Preview {
-    SearchView()
+    SearchView(playbackManager: VideoPlaybackManager())
 }
