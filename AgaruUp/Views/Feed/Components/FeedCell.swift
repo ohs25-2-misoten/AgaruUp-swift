@@ -7,6 +7,7 @@
 
 import AVKit
 import Combine
+import Photos
 import SwiftUI
 
 struct FeedCell: View {
@@ -17,6 +18,12 @@ struct FeedCell: View {
     @State private var isAnimating = false
     @State private var heartPressed = false
     @State private var commentPressed = false
+    @State private var downloadPressed = false
+    @State private var isDownloading = false
+    @State private var downloadProgress: Double = 0
+    @State private var showDownloadSuccess = false
+    @State private var showDownloadError = false
+    @State private var downloadErrorMessage = ""
     
     /// 再生アイコンの表示状態（タップして再生したときに短時間表示される）
     @State private var showPlayIcon = false
@@ -165,28 +172,58 @@ struct FeedCell: View {
                             onRelease: { heartPressed = false }
                         )
 
-                        Button {} label: {
-                            Image(systemName: "ellipsis.bubble.fill")
-                                .resizable()
-                                .frame(width: 20, height: 20)
-								  .foregroundStyle(.gray)
+                        // ダウンロードボタン
+                        Button {
+                            Task {
+                                await downloadVideo()
+                            }
+                        } label: {
+                            ZStack {
+                                if isDownloading {
+                                    // ダウンロード中はプログレスリング表示
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                                        .frame(width: 24, height: 24)
+                                    Circle()
+                                        .trim(from: 0, to: downloadProgress)
+                                        .stroke(Color.white, lineWidth: 2)
+                                        .frame(width: 24, height: 24)
+                                        .rotationEffect(.degrees(-90))
+                                } else {
+                                    Image(systemName: showDownloadSuccess ? "checkmark.circle.fill" : "arrow.down.circle.fill")
+                                        .resizable()
+                                        .frame(width: 20, height: 20)
+                                        .foregroundStyle(showDownloadSuccess ? .green : .white)
+                                }
+                            }
                         }
                         .frame(minWidth: 44, minHeight: 44)
                         .background(
                             Circle()
-                                .fill(Color.white.opacity(commentPressed ? 0.3 : 0.0))
+                                .fill(Color.white.opacity(downloadPressed ? 0.3 : 0.0))
                         )
                         .contentShape(Circle())
                         .pressEvents(
-                            onPress: { commentPressed = true },
-                            onRelease: { commentPressed = false }
+                            onPress: { downloadPressed = true },
+                            onRelease: { downloadPressed = false }
                         )
-					.disabled(true)
+                        .disabled(isDownloading)
+                        .feedSpotlight(for: .download)
                     }
                 }
                 .padding(.bottom, 80)
             }
             .padding()
+        }
+        .alert("ダウンロード完了", isPresented: $showDownloadSuccess) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("動画がカメラロールに保存されました")
+        }
+        .alert("ダウンロードエラー", isPresented: $showDownloadError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(downloadErrorMessage)
         }
         .onTapGesture {
             switch player.timeControlStatus {
@@ -326,6 +363,81 @@ struct FeedCell: View {
                 isAnimating = false
             } catch {
                 print("お気に入りの切り替えエラー: \(error)")
+            }
+        }
+    }
+
+    @MainActor
+    private func downloadVideo() async {
+        guard let url = URL(string: video.videoUrl) else {
+            downloadErrorMessage = "無効な動画URLです"
+            showDownloadError = true
+            return
+        }
+
+        // 写真ライブラリへのアクセス許可をリクエスト
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            downloadErrorMessage = "写真ライブラリへのアクセスが許可されていません。設定から許可してください。"
+            showDownloadError = true
+            return
+        }
+
+        isDownloading = true
+        downloadProgress = 0
+
+        do {
+            // URLSessionを使って動画をダウンロード
+            let (localURL, _) = try await URLSession.shared.download(from: url, delegate: nil)
+
+            // ダウンロードの進捗をシミュレート（実際のダウンロードは完了後に100%にする）
+            withAnimation {
+                downloadProgress = 1.0
+            }
+
+            // 一時ファイルを別の場所にコピー（URLSessionのダウンロードはすぐ削除されるため）
+            let tempDir = FileManager.default.temporaryDirectory
+            let tempFileName = "download_\(UUID().uuidString).mp4"
+            let tempURL = tempDir.appendingPathComponent(tempFileName)
+
+            try FileManager.default.copyItem(at: localURL, to: tempURL)
+
+            // Photos frameworkを使ってカメラロールに保存
+            try await saveVideoToPhotoLibrary(tempURL)
+
+            // 一時ファイルを削除
+            try? FileManager.default.removeItem(at: tempURL)
+
+            isDownloading = false
+            showDownloadSuccess = true
+
+            // 3秒後に成功表示をリセット
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            showDownloadSuccess = false
+
+        } catch {
+            isDownloading = false
+            downloadErrorMessage = error.localizedDescription
+            showDownloadError = true
+        }
+    }
+
+    private func saveVideoToPhotoLibrary(_ url: URL) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+            }) { success, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: NSError(
+                        domain: "FeedCell",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "動画の保存に失敗しました"]
+                    ))
+                }
             }
         }
     }
