@@ -9,7 +9,6 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var playbackManager = VideoPlaybackManager()
-    @State private var searchText: String = ""
 
     var body: some View {
         TabView {
@@ -25,16 +24,9 @@ struct MainTabView: View {
                 FavoriteView()
             }
 
-            // iOS 26で追加されたTabBar統合検索機能
-            // Tab(role: .search)はTabBarに虫眼鏡アイコンとして表示され、
-            // タップするとSearchView内で.searchable()修飾子で定義された検索バーが有効になる
-            Tab(role: .search) {
-                NavigationStack {
-                    SearchView()
-                        .navigationTitle("検索")
-                        .navigationBarTitleDisplayMode(.inline)
-                }
-                .searchable(text: $searchText, prompt: "動画を検索")
+            // iOS 26の検索タブ - role: .searchで切り分けられる
+            Tab("検索", systemImage: "magnifyingglass", role: .search) {
+                SearchView()
             }
         }
         .tint(Color("background"))
