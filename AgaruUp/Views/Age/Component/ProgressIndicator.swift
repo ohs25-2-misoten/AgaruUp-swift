@@ -94,6 +94,7 @@ struct ProgressIndicator: View {
                 }
                 .frame(maxWidth: 300)
                 .animation(.easeInOut(duration: 0.5), value: progress)
+                .ageSpotlight(for: .progressBar)
 
                 // アゲボタン
                 Button(action: {
@@ -145,6 +146,7 @@ struct ProgressIndicator: View {
                 }
                 .frame(width: 280, height: 280)
                 .contentShape(Circle())
+                .ageSpotlight(for: .button)
                 .disabled(
                     isCompleted || isReporting
                         || (bleManager.isEnabled && !bleManager.isDeviceFound))
@@ -165,6 +167,7 @@ struct ProgressIndicator: View {
                 .tint(.green)
                 .padding(.horizontal, 40)
                 .padding(.top, 16)
+                .ageSpotlight(for: .cameraToggle)
 
                 // デバイス情報表示（発見時のみ）
                 if let device = bleManager.discoveredDevice {
