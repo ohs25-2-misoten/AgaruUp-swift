@@ -8,8 +8,18 @@
 import SwiftData
 import SwiftUI
 
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // アプリ起動時にNotificationManagerの初期化（Delegate設定）を確実に行う
+        _ = NotificationManager.shared
+        return true
+    }
+}
+
 @main
 struct AgaruUpApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -28,7 +38,7 @@ struct AgaruUpApp: App {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
-
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -36,5 +46,6 @@ struct AgaruUpApp: App {
             // .task removed
         }
         .modelContainer(sharedModelContainer)
+        .environment(NotificationManager.shared)
     }
 }
