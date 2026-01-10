@@ -8,7 +8,7 @@
 import Foundation
 
 /// 動画情報を表すモデル
-struct Video: Codable, Identifiable, Sendable {
+struct Video: Codable, Identifiable, Sendable, Hashable {
     /// タイトル
     let title: String
     /// タグ一覧

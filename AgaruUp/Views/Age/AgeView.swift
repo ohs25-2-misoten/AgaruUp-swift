@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AgeView: View {
     @State private var isShowingSearch = false
+    @State private var playbackManager = VideoPlaybackManager()
     
     // チュートリアル
     @State private var tutorialManager = AgeTutorialManager.shared
@@ -49,7 +50,7 @@ struct AgeView: View {
                 tutorialManager.start()
             }
             .sheet(isPresented: $isShowingSearch) {
-                SearchView()
+                SearchView(playbackManager: playbackManager)
             }
         }
     }
