@@ -17,11 +17,15 @@ final class NotificationManager: NSObject {
     /// 通知が許可されているかどうか
     var isAuthorized: Bool = false
 
+    /// 通知からの遷移先タブを保持する
+    var pendingTabSelection: MainTabView.MainTab?
+
     private override init() {
         super.init()
+        UNUserNotificationCenter.current().delegate = self
         checkAuthorizationStatus()
     }
-
+    
     /// 通知権限の状態を確認
     func checkAuthorizationStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -65,6 +69,8 @@ final class NotificationManager: NSObject {
         content.body = "\(deviceName) が近くにあります。アゲ報告の準備ができました！"
         content.sound = .default
         content.interruptionLevel = .active
+        // 通知を識別するための情報を追加
+        content.userInfo = ["type": "deviceFound"]
 
         let request = UNNotificationRequest(
             identifier: "device-found-\(UUID().uuidString)",
@@ -79,5 +85,28 @@ final class NotificationManager: NSObject {
                 print("[Notification] Notification sent for device: \(deviceName)")
             }
         }
+    }
+
+}
+
+extension NotificationManager: UNUserNotificationCenterDelegate {
+    // 通知をタップした時の処理
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        
+        if let type = userInfo["type"] as? String, type == "deviceFound" {
+            // "アガる報告"タブへの遷移をリクエスト
+            DispatchQueue.main.async {
+                self.pendingTabSelection = .age
+            }
+        }
+        
+        completionHandler()
+    }
+    
+    // アプリがフォアグラウンドにある時の通知表示設定
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        // フォアグラウンドでも通知を表示したい場合はここで設定（今回は表示しない設定のまま）
+        completionHandler([.banner, .sound])
     }
 }
