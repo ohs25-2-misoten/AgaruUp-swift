@@ -64,8 +64,10 @@ final class APIClient: Sendable {
                 throw APIError.invalidResponse
             }
 
-            let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
+            return try await Task.detached {
+                let decoder = JSONDecoder()
+                return try decoder.decode(T.self, from: data)
+            }.value
         } catch let error as APIError {
             throw error
         } catch let error as DecodingError {
@@ -103,8 +105,10 @@ final class APIClient: Sendable {
                 throw APIError.invalidResponse
             }
 
-            let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
+            return try await Task.detached {
+                let decoder = JSONDecoder()
+                return try decoder.decode(T.self, from: data)
+            }.value
         } catch let error as APIError {
             throw error
         } catch let error as DecodingError {
@@ -144,8 +148,10 @@ final class APIClient: Sendable {
                 throw APIError.invalidResponse
             }
 
-            let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
+            return try await Task.detached {
+                let decoder = JSONDecoder()
+                return try decoder.decode(T.self, from: data)
+            }.value
         } catch let error as APIError {
             throw error
         } catch let error as DecodingError {
