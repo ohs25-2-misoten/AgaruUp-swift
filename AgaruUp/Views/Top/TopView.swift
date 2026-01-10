@@ -25,13 +25,8 @@ struct TopView: View {
     @State private var timerCancellable: AnyCancellable?
     private let timerPublisher = Timer.publish(every: 0.05, on: .main, in: .common)
 
-    // プレースホルダー用の色（後で画像に置き換え）
-    private let colors: [Color] = [
-        Color.orange.opacity(0.4),
-        Color.orange.opacity(0.6),
-        Color.orange.opacity(0.8),
-        Color.orange
-    ]
+    // オンボーディング画像
+    private let images = ["1", "2", "3", "4"]
     private let titles = ["Welcome to AgaruUp", "Discover", "Share", "Let's Begin!"]
     private let descriptions = [
         "アゲていくアプリへようこそ！",
@@ -47,16 +42,13 @@ struct TopView: View {
                     VStack {
                         Spacer()
 
-                        // 画像プレースホルダー
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(colors[index])
-                            .frame(height: 400)
+                        // オンボーディング画像
+                        Image(images[index])
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 350, height: 350)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
                             .padding()
-                            .overlay(
-                                Text("Image \(index + 1)")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.white)
-                            )
 
                         Spacer()
 
