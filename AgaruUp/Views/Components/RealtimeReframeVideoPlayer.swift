@@ -6,6 +6,7 @@
 //
 
 import AVFoundation
+import Combine
 import CoreImage
 import SwiftUI
 import Vision
@@ -29,8 +30,11 @@ struct RealtimeReframeVideoPlayer: View {
     /// 動画出力
     @State private var videoOutput: AVPlayerItemVideoOutput?
 
-    /// スムージング係数
-    private let smoothingFactor: CGFloat = 0.15
+    /// currentItem監視用
+    @State private var currentItemObserver: AnyCancellable?
+
+    /// スムージング係数（大きいほど速く追従）
+    private let smoothingFactor: CGFloat = 0.25
 
     /// 出力アスペクト比（縦長9:16）
     private let outputAspectRatio: CGFloat = 9.0 / 16.0
@@ -41,79 +45,93 @@ struct RealtimeReframeVideoPlayer: View {
                 // 動画をクロップ表示
                 VideoLayerView(player: player)
                     .frame(
-                        width: calculateSourceWidth(containerHeight: geometry.size.height),
+                        width: calculateSourceWidth(containerSize: geometry.size),
                         height: geometry.size.height
                     )
-                    .offset(x: calculateOffset(containerWidth: geometry.size.width))
-                    .clipped()
+                    .offset(x: calculateOffset(containerSize: geometry.size))
+                    .animation(.easeOut(duration: 0.15), value: panOffset)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .clipped()
         }
         .onAppear {
-            setupVideoOutput()
+            setupPlayerObserver()
             startAnalysis()
         }
         .onDisappear {
             stopAnalysis()
+            currentItemObserver?.cancel()
         }
     }
 
-    /// 動画出力をセットアップ
-    private func setupVideoOutput() {
+    /// プレイヤーのcurrentItem変更を監視
+    private func setupPlayerObserver() {
+        // 初期設定
+        if let currentItem = player.currentItem {
+            attachVideoOutput(to: currentItem)
+        }
+
+        // currentItemの変更を監視
+        currentItemObserver = player.publisher(for: \.currentItem)
+            .sink { [self] newItem in
+                if let item = newItem {
+                    attachVideoOutput(to: item)
+                }
+            }
+    }
+
+    /// 動画出力をPlayerItemにアタッチ
+    private func attachVideoOutput(to item: AVPlayerItem) {
+        // 既存の出力を削除
+        if let existingOutput = videoOutput {
+            item.remove(existingOutput)
+        }
+
         let pixelBufferAttributes: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
         ]
         let output = AVPlayerItemVideoOutput(pixelBufferAttributes: pixelBufferAttributes)
+        item.add(output)
         videoOutput = output
 
-        if let currentItem = player.currentItem {
-            currentItem.add(output)
-        }
-
-        // currentItemの変更を監視
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: nil,
-            queue: .main
-        ) { _ in
-            // ループ時にもビデオ出力を維持
-        }
+        print("[ReframePlayer] Video output attached to item")
     }
 
     /// フレーム分析を開始
     private func startAnalysis() {
         // 100msごとに分析（10fps）
         analysisTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            Task {
+            Task { @MainActor in
                 await analyzeCurrentFrame()
             }
         }
+        print("[ReframePlayer] Analysis started")
     }
 
     /// フレーム分析を停止
     private func stopAnalysis() {
         analysisTimer?.invalidate()
         analysisTimer = nil
+        print("[ReframePlayer] Analysis stopped")
     }
 
     /// 現在のフレームを分析
     @MainActor
     private func analyzeCurrentFrame() async {
         guard trackingEnabled,
-              let output = videoOutput,
-              let currentItem = player.currentItem else { return }
+              let output = videoOutput else {
+            return
+        }
 
         let currentTime = player.currentTime()
 
-        // フレームが利用可能か確認
-        guard output.hasNewPixelBuffer(forItemTime: currentTime) else { return }
-
-        // ピクセルバッファを取得
+        // ピクセルバッファを取得（hasNewPixelBufferをスキップして強制取得）
         guard let pixelBuffer = output.copyPixelBuffer(
             forItemTime: currentTime,
             itemTimeForDisplay: nil
-        ) else { return }
+        ) else {
+            return
+        }
 
         // 人物検出を実行
         do {
@@ -124,11 +142,12 @@ struct RealtimeReframeVideoPlayer: View {
             detectedPersonCenter = smoothedCenter
 
             // オフセットを計算（0.5が中央、0.0〜1.0の範囲）
-            // 検出位置が中央からどれだけずれているかをオフセットに変換
-            panOffset = (smoothedCenter - 0.5) * 2.0
+            let newOffset = (smoothedCenter - 0.5) * 2.0
+            panOffset = newOffset
+
+            print("[ReframePlayer] Person at: \(personCenter), offset: \(newOffset)")
 
         } catch {
-            // 検出に失敗した場合は中央を維持
             print("[ReframePlayer] Detection error: \(error)")
         }
     }
@@ -144,14 +163,16 @@ struct RealtimeReframeVideoPlayer: View {
 
                 guard let observations = request.results as? [VNHumanObservation],
                       !observations.isEmpty else {
-                    // 人物が検出されない場合は現在位置を維持
-                    continuation.resume(returning: self.detectedPersonCenter)
+                    // 人物が検出されない場合は中央に戻る
+                    continuation.resume(returning: 0.5)
                     return
                 }
 
                 // 最も大きい（近い）人物の中心位置を返す
                 if let largestPerson = observations.max(by: { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }) {
-                    continuation.resume(returning: largestPerson.boundingBox.midX)
+                    let centerX = largestPerson.boundingBox.midX
+                    print("[ReframePlayer] Detected person at x: \(centerX)")
+                    continuation.resume(returning: centerX)
                 } else {
                     continuation.resume(returning: 0.5)
                 }
@@ -166,30 +187,33 @@ struct RealtimeReframeVideoPlayer: View {
         }
     }
 
-    /// ソース動画の表示幅を計算（縦に合わせて横をはみ出させる）
-    private func calculateSourceWidth(containerHeight: CGFloat) -> CGFloat {
-        // 縦長表示なので、高さに合わせた横幅を計算
-        // 動画のアスペクト比が16:9と仮定
-        let videoAspectRatio: CGFloat = 16.0 / 9.0
-        return containerHeight * videoAspectRatio
+    /// ソース動画の表示幅を計算
+    private func calculateSourceWidth(containerSize: CGSize) -> CGFloat {
+        guard let currentItem = player.currentItem else {
+            // デフォルトで16:9を仮定
+            return containerSize.height * (16.0 / 9.0)
+        }
+
+        let videoSize = currentItem.presentationSize
+        guard videoSize.height > 0 else {
+            return containerSize.height * (16.0 / 9.0)
+        }
+
+        // 動画のアスペクト比を使用
+        let videoAspectRatio = videoSize.width / videoSize.height
+        return containerSize.height * videoAspectRatio
     }
 
     /// パンオフセットを計算
-    private func calculateOffset(containerWidth: CGFloat) -> CGFloat {
-        // 動画のはみ出し部分の最大オフセット
-        guard let currentItem = player.currentItem else { return 0 }
+    private func calculateOffset(containerSize: CGSize) -> CGFloat {
+        let sourceWidth = calculateSourceWidth(containerSize: containerSize)
+        let excessWidth = sourceWidth - containerSize.width
 
-        let videoSize = currentItem.presentationSize
-        guard videoSize.height > 0 else { return 0 }
-
-        let videoAspectRatio = videoSize.width / videoSize.height
-        let containerAspectRatio = outputAspectRatio
-
-        // 動画が縦長表示に比べてどれだけ横に広いか
-        let excessWidth = (videoAspectRatio / containerAspectRatio - 1.0) * containerWidth / 2
+        guard excessWidth > 0 else { return 0 }
 
         // panOffset（-1.0〜1.0）をピクセルオフセットに変換
-        return -panOffset * excessWidth
+        // panOffset = 1.0 のとき左端、-1.0 のとき右端
+        return -panOffset * excessWidth / 2
     }
 }
 
