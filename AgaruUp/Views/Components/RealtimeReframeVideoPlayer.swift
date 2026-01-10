@@ -7,7 +7,6 @@
 
 import AVFoundation
 import Combine
-import CoreImage
 import SwiftUI
 import Vision
 
@@ -21,54 +20,66 @@ struct RealtimeReframeVideoPlayer: View {
     /// 検出された人物の位置（正規化座標）
     @State private var detectedPersonCenter: CGFloat = 0.5
 
-    /// フレーム分析用のタイマー
-    @State private var analysisTimer: Timer?
-
     /// 動画出力
     @State private var videoOutput: AVPlayerItemVideoOutput?
 
-    /// currentItem監視用
-    @State private var currentItemObserver: AnyCancellable?
+    /// 分析タスクのキャンセル用
+    @State private var analysisTask: Task<Void, Never>?
 
-    /// スムージング係数（大きいほど速く追従）
-    private let smoothingFactor: CGFloat = 0.25
+    /// デバッグ用：検出状態
+    @State private var debugInfo: String = "初期化中..."
+
+    /// スムージング係数
+    private let smoothingFactor: CGFloat = 0.3
 
     var body: some View {
         GeometryReader { geometry in
-            TrackingVideoLayerView(
-                player: player,
-                panOffset: panOffset,
-                containerSize: geometry.size
-            )
+            ZStack {
+                TrackingVideoLayerView(
+                    player: player,
+                    panOffset: panOffset,
+                    containerSize: geometry.size
+                )
+
+                // デバッグ表示
+                VStack {
+                    Text(debugInfo)
+                        .font(.caption2)
+                        .foregroundColor(.white)
+                        .padding(4)
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(4)
+                    Spacer()
+                }
+                .padding(4)
+            }
         }
-        .onAppear {
-            setupPlayerObserver()
-            startAnalysis()
+        .task {
+            // Viewが表示されたら分析を開始
+            debugInfo = "分析開始"
+            print("[ReframePlayer] task started")
+
+            await setupAndStartAnalysis()
         }
         .onDisappear {
-            stopAnalysis()
-            currentItemObserver?.cancel()
+            analysisTask?.cancel()
+            print("[ReframePlayer] disappeared")
         }
     }
 
-    /// プレイヤーのcurrentItem変更を監視
-    private func setupPlayerObserver() {
-        if let currentItem = player.currentItem {
-            attachVideoOutput(to: currentItem)
+    /// セットアップと分析開始
+    @MainActor
+    private func setupAndStartAnalysis() async {
+        // PlayerItemの準備を待つ
+        while player.currentItem == nil {
+            debugInfo = "動画待機中..."
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
 
-        currentItemObserver = player.publisher(for: \.currentItem)
-            .sink { newItem in
-                if let item = newItem {
-                    attachVideoOutput(to: item)
-                }
-            }
-    }
-
-    /// 動画出力をPlayerItemにアタッチ
-    private func attachVideoOutput(to item: AVPlayerItem) {
-        if let existingOutput = videoOutput {
-            item.remove(existingOutput)
+        // VideoOutputをアタッチ
+        guard let item = player.currentItem else {
+            debugInfo = "動画なし"
+            return
         }
 
         let pixelBufferAttributes: [String: Any] = [
@@ -78,49 +89,47 @@ struct RealtimeReframeVideoPlayer: View {
         item.add(output)
         videoOutput = output
 
-        print("[ReframePlayer] Video output attached")
-    }
+        debugInfo = "分析中"
+        print("[ReframePlayer] Video output attached, starting analysis loop")
 
-    /// フレーム分析を開始
-    private func startAnalysis() {
-        analysisTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            Task { @MainActor in
-                await analyzeCurrentFrame()
-            }
+        // 分析ループ
+        while !Task.isCancelled {
+            await analyzeCurrentFrame()
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms = 10fps
         }
-        RunLoop.current.add(analysisTimer!, forMode: .common)
-        print("[ReframePlayer] Analysis started")
-    }
-
-    /// フレーム分析を停止
-    private func stopAnalysis() {
-        analysisTimer?.invalidate()
-        analysisTimer = nil
     }
 
     /// 現在のフレームを分析
     @MainActor
     private func analyzeCurrentFrame() async {
-        guard let output = videoOutput else { return }
+        guard let output = videoOutput else {
+            debugInfo = "出力なし"
+            return
+        }
 
         let currentTime = player.currentTime()
 
         guard let pixelBuffer = output.copyPixelBuffer(
             forItemTime: currentTime,
             itemTimeForDisplay: nil
-        ) else { return }
+        ) else {
+            debugInfo = "フレーム取得失敗"
+            return
+        }
 
         do {
             let personCenter = try await detectPersonCenter(in: pixelBuffer)
             let smoothedCenter = detectedPersonCenter + (personCenter - detectedPersonCenter) * smoothingFactor
             detectedPersonCenter = smoothedCenter
 
-            withAnimation(.easeOut(duration: 0.15)) {
+            withAnimation(.easeOut(duration: 0.1)) {
                 panOffset = (smoothedCenter - 0.5) * 2.0
             }
 
-            print("[ReframePlayer] Offset: \(panOffset)")
+            debugInfo = String(format: "検出中 x:%.2f", personCenter)
+            print("[ReframePlayer] Person: \(personCenter), Offset: \(panOffset)")
         } catch {
+            debugInfo = "検出エラー"
             print("[ReframePlayer] Error: \(error)")
         }
     }
@@ -136,14 +145,14 @@ struct RealtimeReframeVideoPlayer: View {
 
                 guard let observations = request.results as? [VNHumanObservation],
                       !observations.isEmpty else {
+                    // 人物なし -> 中央
                     continuation.resume(returning: 0.5)
                     return
                 }
 
                 if let largest = observations.max(by: {
-                    $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height
+                    $0.boundingBox.area < $1.boundingBox.area
                 }) {
-                    print("[ReframePlayer] Person at: \(largest.boundingBox.midX)")
                     continuation.resume(returning: largest.boundingBox.midX)
                 } else {
                     continuation.resume(returning: 0.5)
@@ -160,8 +169,14 @@ struct RealtimeReframeVideoPlayer: View {
     }
 }
 
-/// トラッキング対応のビデオレイヤービュー
-/// CALayerのtransformを直接操作してパンする
+// MARK: - CGRect Extension
+
+private extension CGRect {
+    var area: CGFloat { width * height }
+}
+
+// MARK: - Tracking Video Layer
+
 struct TrackingVideoLayerView: UIViewRepresentable {
     let player: AVPlayer
     let panOffset: CGFloat
@@ -206,25 +221,17 @@ struct TrackingVideoLayerView: UIViewRepresentable {
             guard let videoSize = player?.currentItem?.presentationSize,
                   videoSize.width > 0, videoSize.height > 0 else { return }
 
-            // 動画のアスペクト比
             let videoAspectRatio = videoSize.width / videoSize.height
-            // コンテナのアスペクト比
             let containerAspectRatio = containerSize.width / containerSize.height
 
-            // 動画がコンテナより横長の場合のみパンが有効
             guard videoAspectRatio > containerAspectRatio else { return }
 
-            // 動画を高さに合わせたときの実際の表示幅
             let scaledVideoWidth = containerSize.height * videoAspectRatio
-            // はみ出す幅の半分（最大パン量）
             let maxPanX = (scaledVideoWidth - containerSize.width) / 2
-
-            // オフセットをピクセルに変換
             let translateX = -offset * maxPanX
 
-            // CALayerにtransformを適用（アニメーション付き）
             CATransaction.begin()
-            CATransaction.setAnimationDuration(0.15)
+            CATransaction.setAnimationDuration(0.1)
             playerLayer.setAffineTransform(CGAffineTransform(translationX: translateX, y: 0))
             CATransaction.commit()
         }
