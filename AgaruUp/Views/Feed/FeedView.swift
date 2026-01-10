@@ -14,6 +14,10 @@ struct FeedView: View {
     @State private var scrollPosition: String?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    
+    // チュートリアル
+    @State private var tutorialManager = FeedTutorialManager.shared
+    @State private var spotlightFrames: [FeedTutorialStep: CGRect] = [:]
 
     /// 特定の動画IDから開始する場合に指定
     let initialVideoId: String?
@@ -23,6 +27,10 @@ struct FeedView: View {
     init(playbackManager: VideoPlaybackManager, initialVideoId: String? = nil) {
         self.playbackManager = playbackManager
         self.initialVideoId = initialVideoId
+    }
+    
+    private var currentSpotlightFrame: CGRect {
+        spotlightFrames[tutorialManager.currentStep] ?? fallbackFrame(for: tutorialManager.currentStep)
     }
 
     var body: some View {
@@ -61,13 +69,27 @@ struct FeedView: View {
                     playVideoOnChangeOfScrollPosition(videoId: newValue)
                 }
             }
+            
+            // チュートリアルオーバーレイ
+            if tutorialManager.isShowing {
+                FeedTutorialOverlayView(
+                    manager: tutorialManager,
+                    spotlightFrame: currentSpotlightFrame
+                )
+            }
+        }
+        .onPreferenceChange(FeedSpotlightPreferenceKey.self) { frames in
+            spotlightFrames.merge(frames) { _, new in new }
         }
         .task {
             await loadVideos()
-            // loadVideos完了後にスクロール位置を設定
             if let initialVideoId {
                 scrollPosition = initialVideoId
             }
+        }
+        .onAppear {
+            // 初回表示時にチュートリアル開始
+            tutorialManager.start()
         }
         .onDisappear {
             playbackManager.pause()
@@ -81,19 +103,13 @@ struct FeedView: View {
         do {
             var loadedVideos = try await videoService.searchVideos(limit: 10)
 
-            // 初期動画IDが指定されている場合
             if let initialVideoId {
-                // 指定された動画を取得
                 let initialVideos = try await videoService.getBulkVideos(videoIds: [initialVideoId])
 
                 if let initialVideo = initialVideos.first {
-                    // おすすめ動画リストから同じIDの動画を削除（重複を防ぐ）
                     loadedVideos.removeAll { $0.movieId == initialVideoId }
-
-                    // 先頭に初期動画を追加
                     videos = [initialVideo] + loadedVideos
                 } else {
-                    // 初期動画が取得できなかった場合は通常のリストを使用
                     videos = loadedVideos
                 }
             } else {
@@ -126,6 +142,34 @@ struct FeedView: View {
         else { return }
 
         playbackManager.loadVideo(url: url)
+    }
+    
+    private func fallbackFrame(for step: FeedTutorialStep) -> CGRect {
+        let screenSize = UIScreen.main.bounds.size
+        
+        switch step {
+        case .swipe:
+            return CGRect(
+                x: screenSize.width / 2 - 60,
+                y: screenSize.height / 2 - 150,
+                width: 120,
+                height: 300
+            )
+        case .tap:
+            return CGRect(
+                x: screenSize.width / 2 - 75,
+                y: screenSize.height / 2 - 75,
+                width: 150,
+                height: 150
+            )
+        case .download:
+            return CGRect(
+                x: screenSize.width - 60,
+                y: screenSize.height - 215,
+                width: 50,
+                height: 50
+            )
+        }
     }
 }
 
