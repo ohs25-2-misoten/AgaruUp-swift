@@ -17,31 +17,15 @@ AgaruUpは、ユーザーが日常生活の中で遭遇した『アガる』出�
 
 ## 🚀 セットアップ
 
-### 必要条件
+詳細なセットアップ手順については [SETUP.md](./SETUP.md) を参照してください。
 
-- macOS 14.0 (Sonoma) 以降
-- Xcode 16.0 以降
-- iOS 17.0 以降のデバイスまたはシミュレータ
+### クイックスタート
 
-### インストール手順
-
-1. リポジトリをクローンします：
 ```bash
 git clone https://github.com/ohs25-2-misoten/AgaruUp-swift.git
 cd AgaruUp
-```
-
-2. Xcodeでプロジェクトを開きます：
-```bash
 open AgaruUp.xcodeproj
 ```
-
-3. 必要に応じて署名とチーム設定を行います：
-   - プロジェクト設定 > Signing & Capabilities
-   - 開発者アカウントを選択
-
-4. ビルドして実行します：
-   - `Cmd + R` または Run ボタンをクリック
 
 ## 📁 プロジェクト構造
 
