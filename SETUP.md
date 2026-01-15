@@ -4,9 +4,8 @@
 
 ## 📋 必要条件
 
-- macOS 14.0 (Sonoma) 以降
-- Xcode 16.0 以降
-- iOS 17.0 以降のデバイスまたはシミュレータ
+- Xcode 26.0 以降
+- iOS 26.0 以降のデバイスまたはエミュレータ
 
 ## 📥 インストール手順
 
@@ -21,7 +20,7 @@ cd AgaruUp
 open AgaruUp.xcodeproj
 ```
 
-3. 必要に応じて署名とチーム設定を行います：
+3. 必要に応じて署名とチーム設定を行います(エミュレータ開発の場合任意)：
    - プロジェクト設定 > Signing & Capabilities
    - 開発者アカウントを選択
 
@@ -60,18 +59,6 @@ Xcodeのスキームを選択することで、接続先のバックエンドAPI
 - `Configuration.swift` で環境設定を読み込み
 - `APIClient.swift` が適切なベースURLを使用してAPIリクエストを送信
 
-## 🧪 テスト実行
-
-### Xcode内でテスト実行
-
-`Cmd + U` を押してテストを実行します。
-
-### コマンドラインからテスト実行
-
-```bash
-xcodebuild test -scheme AgaruUp -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.0'
-```
-
 ## 🔧 トラブルシューティング
 
 ### よくある問題
@@ -87,10 +74,12 @@ xcodebuild test -scheme AgaruUp -destination 'platform=iOS Simulator,name=iPhone
 1. Xcode > Settings > Accounts で開発者アカウントを確認
 2. Target > Signing & Capabilities でチームを正しく選択
 
-#### シミュレータが起動しない場合
+#### バックエンドとの接続ができない場合
 
-1. Xcode > Settings > Platforms でシミュレータがインストールされているか確認
-2. 必要に応じてiOS Simulatorをダウンロード
+1. バックエンドサーバーの起動確認
+2. バックエンドが下記のAPIを正しく実装している  
+   [API docs](https://documenter.getpostman.com/view/28549790/2sB3dHXZ9y#0a2d76d1-5fa0-45d4-85db-1a2511a8d1df:~:text=%E3%82%AB%E3%83%A1%E3%83%A9%E6%83%85%E5%A0%B1%E5%8F%96%E5%BE%97,-https)
+3. ビルドスキームが意図したバックエンドを参照しているかを確認する
 
 ---
 
