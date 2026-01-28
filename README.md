@@ -2,6 +2,8 @@
 
 AgaruUpは、SwiftUIとSwiftDataを使用して開発されたiOSアプリケーションです。
 
+[Githubはこちら](https://github.com/ohs25-2-misoten/AgaruUp-swift.git)
+
 ## 📱 概要
 
 AgaruUpは、ユーザーが日常生活の中で遭遇した『アガる』出来事をニュース化して共有できるプラットフォームです。
